@@ -7,6 +7,7 @@ import MapView from './components/MapView.vue'
 <template>
   <div>
     <HelloWorld v-if="false"/>
+    <Header />
     <MapView />
   </div>
 </template>
