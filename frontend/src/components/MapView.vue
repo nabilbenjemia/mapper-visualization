@@ -16,16 +16,8 @@ onMounted(() => {
   });
 
   map.on('load', () => {
-    // 1. Make the SEA/BACKGROUND white (or light grey)
-    // 1. Change the Sea (Background)
-  if (map.getLayer('background')) {
-    map.setPaintProperty('background', 'background-color', '#ffffff');
-  } else {
-    console.warn('Background layer not found. Please check the layer name in the style.');
-  }
 
-  // 2. Change Germany's color specifically
-  if (map.getLayer('countries-fill')) {
+    // Change Germany's color specifically
     map.setPaintProperty('countries-fill', 'fill-color', [
       'match',
       ['get', 'ADM0_A3'],
@@ -34,11 +26,50 @@ onMounted(() => {
     ]);
     
     map.setPaintProperty('countries-fill', 'fill-opacity', 1);
-  } else {
-    console.warn('Countries layer not found. Please check the layer name in the style.');
-  }
 
-    
+    // Add Bundesländer borders and labels
+    map.addSource('bundeslaender', {
+      type: 'geojson',
+      data: 'https://raw.githubusercontent.com/isellsoap/deutschlandGeoJSON/main/2_bundeslaender/1_sehr_hoch.geo.json'
+    });
+
+    map.addLayer({
+      id: 'bundeslaender-outline',
+      type: 'line',
+      source: 'bundeslaender',
+      paint: {
+        'line-color': '#627BC1',
+        'line-width': 1.5
+      }
+    });
+
+    // Labels from properties.name
+    /*
+    map.addLayer({
+      id: 'bundeslaender-labels',
+      type: 'symbol',
+      source: 'bundeslaender',
+      layout: {
+        'text-field': ['get', 'name'],
+        'text-size': 12,
+        'text-font': ['Open Sans Semibold'],
+        'text-allow-overlap': false
+      },
+      paint: {
+        'text-color': '#1f2937',
+        'text-halo-color': '#ffffff',
+        'text-halo-width': 1.2
+      }
+    });*/
+  });
+
+  // Print center and zoom values
+  map.on('moveend', () => {
+    const center = map.getCenter();
+    const zoom = map.getZoom();
+    console.log(
+      `center: [${center.lng.toFixed(4)}, ${center.lat.toFixed(4)}], zoom: ${zoom.toFixed(2)}`
+    );
   });
 });
 </script>
