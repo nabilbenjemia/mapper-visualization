@@ -1,5 +1,5 @@
 <template>
-  <div id="map-container"></div>
+  <div id="map-container" class="w-screen h-screen"></div>
 </template>
 
 <script setup>
@@ -43,9 +43,3 @@ onMounted(() => {
 });
 </script>
 
-<style scoped>
-#map-container {
-  width: 100vw;
-  height: 100vh;
-}
-</style>
