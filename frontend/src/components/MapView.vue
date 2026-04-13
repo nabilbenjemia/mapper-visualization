@@ -11,8 +11,8 @@ onMounted(() => {
   const map = new maplibregl.Map({
     container: 'map-container',
     style: 'https://demotiles.maplibre.org/style.json',
-    center: [10.4515, 51.1657],
-    zoom: 5.5
+    center: [10.4097, 51.4938],/*[10.4515, 51.1657]*/
+    zoom: 5.7 /*5.5*/
   });
 
   map.on('load', () => {
