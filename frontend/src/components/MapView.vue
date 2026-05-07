@@ -18,6 +18,7 @@ onMounted(() => {
   map.on('load', () => {
 
     // Change Germany's color specifically
+    /*
     map.setPaintProperty('countries-fill', 'fill-color', [
       'match',
       ['get', 'ADM0_A3'],
@@ -34,34 +35,57 @@ onMounted(() => {
     });
 
     map.addLayer({
-      id: 'bundeslaender-outline',
+      id: 'hamburg-border',
       type: 'line',
       source: 'bundeslaender',
+      filter: ['==', ['get', 'name'], 'Hamburg'],
       paint: {
-        'line-color': '#627BC1',
-        'line-width': 1.5
+        'line-color': '#0000ff',
+        'line-width': 2
       }
-    });
+    })
+    */
+    // ADD TILES !!!!!!!!!!!!!
+      console.log("🟢 Map loaded");
 
-    // Labels from properties.name
-    /*
-    map.addLayer({
-      id: 'bundeslaender-labels',
-      type: 'symbol',
-      source: 'bundeslaender',
-      layout: {
-        'text-field': ['get', 'name'],
-        'text-size': 12,
-        'text-font': ['Open Sans Semibold'],
-        'text-allow-overlap': false
-      },
-      paint: {
-        'text-color': '#1f2937',
-        'text-halo-color': '#ffffff',
-        'text-halo-width': 1.2
-      }
-    });*/
-  });
+      map.addSource("hospital", {
+        type: "vector",
+        url: "pmtiles://http://localhost:8000/tiles/hamburg_hospital_drive.pmtiles"
+      });
+
+      console.log("📦 Source added: hospital");
+
+      map.on("sourcedata", (e) => {
+        if (e.sourceId === "hospital") {
+          console.log("📡 Hospital source event:", e);
+
+          if (e.isSourceLoaded) {
+            console.log("✅ Hospital source fully loaded");
+          }
+        }
+      });
+
+      map.addLayer({
+        id: "hospital-layer",
+        type: "fill", //"circle",
+        source: "hospital",
+        "source-layer": "hospital_drive",
+        paint: {
+          "fill-color": [
+            'interpolate',
+            ['linear'],
+            ['get', 'value'],
+            0,   "#2c7bb6",   // blue
+            5,   "#abd9e9",
+            10,  "#ffffbf",
+            20,  "#fdae61",
+            30,  "#d7191c"    // red
+          ]
+        }
+      });
+
+      console.log("🎨 Layer added: hospital-layer");
+    });
 
   // Print center and zoom values
   map.on('moveend', () => {
