@@ -48,6 +48,10 @@ def build_pmtiles(parquet_path: str, output_path: str, category: str, mode: str)
             f.write(json.dumps(feature) + "\n")
             count += 1
 
+            # Log progress every 10000 features
+            if count % 10000 == 0:
+                logger.info(f"Progress: {count} features written, {invalid} invalid")
+
     logger.info(f"Features written: {count}, invalid: {invalid}")
 
     if count == 0:
@@ -61,18 +65,25 @@ def build_pmtiles(parquet_path: str, output_path: str, category: str, mode: str)
         tmp_file,
         "-o", output_path,
         "-l", f"{category}_{mode}",
-        "-Z5", "-z14",
-        "--coalesce-densest-as-needed", #"--drop-densest-as-needed",
-        "--no-feature-limit",
-        "--no-tile-size-limit", #may cause memory issues, but we want to keep all features
-        "--no-line-simplification",
+        "-Z0", "-z9",
+        #"--coalesce-densest-as-needed",    #may cause memory issues
+        #"--no-feature-limit",              #may cause memory issues
+        #"--no-tile-size-limit",            #may cause memory issues
+        #"--no-line-simplification",        #may cause memory issues
+        "--simplify-only-low-zooms", #optimization
+        "--drop-densest-as-needed", #optimization
         "--extend-zooms-if-still-dropping",
         "--force"
     ]
 
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
+    out_lines = []
+    for line in proc.stdout:
+        out_lines.append(line.rstrip("\n"))
+        logger.info(f"tippecanoe: {line.rstrip()}")
 
+    proc.wait()
     logger.info(f"Total time: {time.time() - start_time:.2f}s")
 
-    if result.returncode != 0:
-        raise RuntimeError(f"Tippecanoe failed:\n{result.stderr}")
+    if proc.returncode != 0:
+        raise RuntimeError("Tippecanoe failed:\n" + "\n".join(out_lines))
