@@ -241,10 +241,20 @@ def test_geo(h3_index: str):
         "center": {"lng": center[0], "lat": center[1]}
     }
     
-@app.post("/build-tiles/{category}/{mode}")
-def build_tiles(category: str, mode: str, background_tasks: BackgroundTasks):
-    city = "hamburg"
-    parquet_path = "/mnt/data/results/2026-02-19T14-11-24Z_germany-hamburg_ee98d3/cells.parquet"
+@app.post("/build-tiles/{city}/{category}/{mode}")
+def build_tiles(city: str, category: str, mode: str, background_tasks: BackgroundTasks):
+    if city.lower() == "hamburg":
+        parquet_path = "/mnt/data/results/2026-02-19T14-11-24Z_germany-hamburg_ee98d3/cells.parquet"
+    elif city.lower() == "bayern":
+        parquet_path = "/mnt/data/results/2026-04-03T10-18-10Z_germany-bayern_bfc46a/cells.parquet"
+    elif city.lower() == "germany":
+        parquet_path = "/mnt/data/results/2026-03-18T14-34-36Z_europe-germany_b9dada/cells.parquet"
+    else:
+        return {"status": "error", "message": f"City {city} not found"}
+    
+    #parquet_path = "/mnt/data/results/2026-02-19T14-11-24Z_germany-hamburg_ee98d3/cells.parquet"
+    #parquet_path = "/mnt/data/results/2026-03-18T14-34-36Z_europe-germany_b9dada/cells.parquet"
+    #parquet_path = "/mnt/data/results/2026-04-03T10-18-10Z_germany-bayern_bfc46a/cells.parquet"
     output_path = f"/mnt/data/tiles/{city}_{category}_{mode}.pmtiles"
 
     try:
