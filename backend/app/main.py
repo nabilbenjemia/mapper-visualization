@@ -241,6 +241,49 @@ def test_geo(h3_index: str):
         "center": {"lng": center[0], "lat": center[1]}
     }
     
+@app.post("/build-tiles/{city}")
+def build_all_tiles(city: str):
+    if city.lower() == "hamburg":
+        parquet_path = "/mnt/data/results/2026-02-19T14-11-24Z_germany-hamburg_ee98d3/cells.parquet"
+    elif city.lower() == "bayern":
+        parquet_path = "/mnt/data/results/2026-04-03T10-18-10Z_germany-bayern_bfc46a/cells.parquet"
+    elif city.lower() == "germany":
+        parquet_path = "/mnt/data/results/2026-03-18T14-34-36Z_europe-germany_b9dada/cells.parquet"
+    else:
+        return {"status": "error", "message": f"City {city} not found"}
+    
+    errors = []
+    
+    for category in Category:
+        for mode in Mode:
+            output_path = f"/mnt/data/tiles/{city}_{category.value}_{mode.value}.pmtiles"
+            try:
+                build_pmtiles(
+                    parquet_path,
+                    output_path,
+                    category.value,
+                    mode.value
+                )
+
+            except RuntimeError as e:
+
+                errors.append({
+                    "category": category.value,
+                    "mode": mode.value,
+                    "error": str(e)
+                })
+
+    if errors:
+        return {
+            "status": "partial_failure",
+            "errors": errors
+        }
+
+    return {
+        "status": "ok",
+        "message": f"All tiles generated for {city}"
+    }
+    
 @app.post("/build-tiles/{city}/{category}/{mode}")
 def build_tiles(city: str, category: str, mode: str, background_tasks: BackgroundTasks):
     if city.lower() == "hamburg":
@@ -262,6 +305,9 @@ def build_tiles(city: str, category: str, mode: str, background_tasks: Backgroun
         return {"status": "accepted", "message": f"PMTiles build started for {category} {mode}"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+    
+
+  
     
 app.mount(
     "/tiles",
