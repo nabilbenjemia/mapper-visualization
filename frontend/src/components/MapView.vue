@@ -11,6 +11,18 @@
       />
 
     </div>
+
+    <div
+      v-if="hoverInfo"
+      class="hover-tooltip"
+      :style="{
+        left: mousePos.x + 12 + 'px',
+        top: mousePos.y + 12 + 'px'
+      }"
+    >
+    <div><b>Layer:</b> {{ hoverInfo.layer }}</div>
+    <div><b>Value:</b> {{ hoverInfo.value }}</div>
+  </div>
   </div>
 </template>
 
@@ -27,8 +39,9 @@ const selectedPalette = ref('classic');
 const expanded = ref(false);
 
 const map = ref(null);
+const hoverInfo = ref(null);
 
-
+const mousePos = ref({ x: 0, y: 0 });
 
 watch(selectedPalette, (newPalette) => {
   if (!map.value) return;
@@ -38,7 +51,7 @@ watch(selectedPalette, (newPalette) => {
   const stops = [0, 5, 10, 20, 30];
 
   map.value.setPaintProperty(
-    'germany-supermarket-layer',
+    'germany-hospital-layer',
     'fill-color',
     [
       'interpolate',
@@ -104,9 +117,9 @@ onMounted(() => {
     // ADD TILES !!!!!!!!!!!!!
       console.log("🟢 Map loaded");
 
-      map.value.addSource("germany-supermarket", {
+      map.value.addSource("germany-hospital", {
         type: "vector",
-        url: "pmtiles://http://localhost:8000/tiles/germany_supermarket_transit.pmtiles" //"pmtiles://http://localhost:8000/tiles/hamburg_hospital_drive.pmtiles"
+        url: "pmtiles://http://localhost:8000/tiles/germany_hospital_bike.pmtiles" //"pmtiles://http://localhost:8000/tiles/hamburg_hospital_drive.pmtiles"
       });
 
       console.log("📦 Source added: supermarket");
@@ -122,14 +135,14 @@ onMounted(() => {
       });
 
       const colors = palettes[selectedPalette.value]?.colors ?? [];
-      const stops = [0, 5, 10, 20, 30];
+      const stops = [0, 2, 5, 10, 30];
 
       map.value.addLayer({
-      id: "germany-supermarket-layer",
+      id: "germany-hospital-layer",
       //type: "circle",
       type: "fill",
-      source: "germany-supermarket",
-      "source-layer": "supermarket_transit",
+      source: "germany-hospital",
+      "source-layer": "hospital_bike", // Adjust this to match the actual layer name in your PMTiles
       paint: {
         "fill-color": [
           "interpolate",
@@ -146,36 +159,42 @@ onMounted(() => {
       }, "countries-label" // Place the supermarket layer below country labels
       );
 
-      console.log("🎨 Layer added: germany-supermarket-layer");
-
-      //HAMBURG supermarket transit
-      /*
-      map.addSource("hamburg-supermarket", {
-        type: "vector",
-        url: "pmtiles://http://localhost:8000/tiles/hamburg_supermarket_transit.pmtiles" //"pmtiles://http://localhost:8000/tiles/hamburg_hospital_drive.pmtiles"
-      });
-
-      map.addLayer({
-      id: "hamburg-supermarket-layer",
-      type: "circle",
-      source: "hamburg-supermarket",
-      "source-layer": "supermarket_transit",
-      paint: {
-        "circle-radius": 2.5,
-        "circle-color": [
-          "interpolate",
-          ["linear"],
-          ["get", "value"],
-          0, "#2c7bb6",
-          5, "#abd9e9",
-          10, "#ffffbf",
-          20, "#fdae61",
-          30, "#d7191c"
-        ],
-        "circle-opacity": 0.8
-      }
-      });*/
+      console.log("🎨 Layer added: germany-hospital-layer");
     });
+
+
+  map.value.on("mousemove", (e) => {
+    const zoom = map.value.getZoom();
+    mousePos.value = e.point;
+
+    if (zoom <= 10) {
+      hoverInfo.value = null;
+      map.value.getCanvas().style.cursor = "";
+      return;
+    }
+
+    const features = map.value.queryRenderedFeatures(e.point, {
+      layers: ["germany-hospital-layer"]
+    });
+
+    const feature = features[0];
+
+    if (feature) {
+      map.value.getCanvas().style.cursor = "pointer";
+
+      hoverInfo.value = {
+        layer: "hospital_drive",
+        value: feature.properties.value
+      };
+    } else {
+      map.value.getCanvas().style.cursor = "";
+
+      hoverInfo.value = {
+        layer: "hospital_drive",
+        value: 0
+      };
+    }
+  });
 
   // Print center and zoom values
   map.value.on('moveend', () => {
@@ -215,6 +234,19 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.hover-tooltip {
+  position: absolute;
+  background: #000000CC;
+  color: white;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  pointer-events: none;
+  white-space: nowrap;
+  transform: translate(0, 0);
+  transition: left 0.05s linear, top 0.05s linear;
 }
 </style>
 
