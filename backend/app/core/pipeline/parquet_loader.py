@@ -17,6 +17,7 @@ def load_layer(parquet_path: str, category: str, mode: str):
     query = f"""
         SELECT h3, {column}
         FROM read_parquet('{parquet_path}')
+        WHERE {column} IS NOT NULL AND {column} > 0
     """
     try:
         return con.execute(query).fetchall()
