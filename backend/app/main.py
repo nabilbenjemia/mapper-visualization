@@ -244,11 +244,11 @@ def test_geo(h3_index: str):
 @app.post("/build-tiles/{city}")
 def build_all_tiles(city: str):
     if city.lower() == "hamburg":
-        parquet_path = "/mnt/data/results/2026-02-19T14-11-24Z_germany-hamburg_ee98d3/cells.parquet"
+        parquet_path_base = "/mnt/data/results/2026-02-19T14-11-24Z_germany-hamburg_ee98d3/"
     elif city.lower() == "bayern":
-        parquet_path = "/mnt/data/results/2026-04-03T10-18-10Z_germany-bayern_bfc46a/cells.parquet"
+        parquet_path_base = "/mnt/data/results/2026-04-03T10-18-10Z_germany-bayern_bfc46a/"
     elif city.lower() == "germany":
-        parquet_path = "/mnt/data/results/2026-03-18T14-34-36Z_europe-germany_b9dada/cells.parquet"
+        parquet_path_base = "/mnt/data/results/2026-03-18T14-34-36Z_europe-germany_b9dada/"
     else:
         return {"status": "error", "message": f"City {city} not found"}
     
@@ -259,7 +259,11 @@ def build_all_tiles(city: str):
             output_path = f"/mnt/data/tiles/{city}_{category.value}_{mode.value}.pmtiles"
             try:
                 build_pmtiles(
-                    parquet_path,
+                    {
+                        6: parquet_path_base + "cells_res6.parquet", 
+                        8: parquet_path_base + "cells_res8.parquet", 
+                        10: parquet_path_base + "cells_res10.parquet"
+                    },
                     output_path,
                     category.value,
                     mode.value
@@ -287,21 +291,18 @@ def build_all_tiles(city: str):
 @app.post("/build-tiles/{city}/{category}/{mode}")
 def build_tiles(city: str, category: str, mode: str, background_tasks: BackgroundTasks):
     if city.lower() == "hamburg":
-        parquet_path = "/mnt/data/results/2026-02-19T14-11-24Z_germany-hamburg_ee98d3/cells.parquet"
+        parquet_path_base = "/mnt/data/results/2026-02-19T14-11-24Z_germany-hamburg_ee98d3/"
     elif city.lower() == "bayern":
-        parquet_path = "/mnt/data/results/2026-04-03T10-18-10Z_germany-bayern_bfc46a/cells.parquet"
+        parquet_path_base = "/mnt/data/results/2026-04-03T10-18-10Z_germany-bayern_bfc46a/"
     elif city.lower() == "germany":
-        parquet_path = "/mnt/data/results/2026-03-18T14-34-36Z_europe-germany_b9dada/cells.parquet"
+        parquet_path_base = "/mnt/data/results/2026-03-18T14-34-36Z_europe-germany_b9dada/"
     else:
         return {"status": "error", "message": f"City {city} not found"}
     
-    #parquet_path = "/mnt/data/results/2026-02-19T14-11-24Z_germany-hamburg_ee98d3/cells.parquet"
-    #parquet_path = "/mnt/data/results/2026-03-18T14-34-36Z_europe-germany_b9dada/cells.parquet"
-    #parquet_path = "/mnt/data/results/2026-04-03T10-18-10Z_germany-bayern_bfc46a/cells.parquet"
     output_path = f"/mnt/data/tiles/{city}_{category}_{mode}.pmtiles"
 
     try:
-        background_tasks.add_task(build_pmtiles, parquet_path, output_path, category, mode)
+        background_tasks.add_task(build_pmtiles, {6: parquet_path_base + "cells_res6.parquet", 8: parquet_path_base + "cells_res8.parquet", 10: parquet_path_base + "cells_res10.parquet"}, output_path, category, mode)
         return {"status": "accepted", "message": f"PMTiles build started for {category} {mode}"}
     except Exception as e:
         return {"status": "error", "message": str(e)}

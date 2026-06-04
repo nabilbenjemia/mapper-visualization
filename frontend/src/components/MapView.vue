@@ -34,6 +34,10 @@ import { palettes } from '../config/palettes';
 import PaletteLegend from './PaletteLegend.vue';
 import SettingsToolbar from './SettingsToolbar.vue';
 
+//////////////////////////////////////////
+const layer = ref('hospital_drive');
+/////////////////////////////////////////
+
 
 const selectedPalette = ref('classic'); 
 const expanded = ref(false);
@@ -119,7 +123,7 @@ onMounted(() => {
 
       map.value.addSource("germany-hospital", {
         type: "vector",
-        url: "pmtiles://http://localhost:8000/tiles/germany_hospital_bike.pmtiles" //"pmtiles://http://localhost:8000/tiles/hamburg_hospital_drive.pmtiles"
+        url: "pmtiles://http://localhost:8000/tiles/germany_" + layer.value + ".pmtiles" //"pmtiles://http://localhost:8000/tiles/hamburg_hospital_drive.pmtiles"
       });
 
       console.log("📦 Source added: supermarket");
@@ -142,7 +146,7 @@ onMounted(() => {
       //type: "circle",
       type: "fill",
       source: "germany-hospital",
-      "source-layer": "hospital_bike", // Adjust this to match the actual layer name in your PMTiles
+      "source-layer": layer.value, // Adjust this to match the actual layer name in your PMTiles
       paint: {
         "fill-color": [
           "interpolate",
