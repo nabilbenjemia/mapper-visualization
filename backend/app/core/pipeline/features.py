@@ -22,7 +22,6 @@ def build_feature(h3_index: str, value: float, round_value: int = 2):
         "geometry": polygon,
         "properties": {
             "h3": h3_index,
-            "value": round(value, round_value),
-            "center": center
+            "value": round(value)
         }
     }
