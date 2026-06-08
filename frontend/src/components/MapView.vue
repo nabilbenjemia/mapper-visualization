@@ -1,15 +1,21 @@
 <template>
-  <div class="app">
-    <div id="map-container"></div>
+  <div class="map-wrapper">
+    <div class="map-view">
 
-    <div class="legend-stack">
-
-      <PaletteLegend
-        :palette="selectedPalette"
-        :selected-palette="selectedPalette"
-        @update="selectedPalette = $event"
+      <MapControls
+        :categories="categories"
+        :modes="modes"
+        @apply="handleSelection"
       />
+      <div id="map-container"></div>
 
+      <div class="legend-stack">
+        <PaletteLegend
+          :palette="selectedPalette"
+          :selected-palette="selectedPalette"
+          @update="selectedPalette = $event"
+        />
+      </div>
     </div>
 
     <div
@@ -20,22 +26,30 @@
         top: mousePos.y + 12 + 'px'
       }"
     >
-    <div><b>Layer:</b> {{ hoverInfo.layer }}</div>
-    <div><b>Value:</b> {{ hoverInfo.value }}</div>
-  </div>
+      <div><b>Layer:</b> {{ hoverInfo.layer }}</div>
+      <div><b>Value:</b> {{ hoverInfo.value }}</div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue'
+import MapControls from './MapControls.vue'
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { palettes } from '../config/palettes';
 import PaletteLegend from './PaletteLegend.vue';
 import SettingsToolbar from './SettingsToolbar.vue';
+import { categories } from '../config/categories'
+import { modes } from '../config/modes'
 
 //////////////////////////////////////////
-const layer = ref('hospital_drive');
+const selectedCategory = ref("hospital")
+const selectedMode = ref("drive")
+
+const layer = computed(() => {
+  return `${selectedCategory.value}_${selectedMode.value}`
+})
 /////////////////////////////////////////
 
 
@@ -46,6 +60,11 @@ const map = ref(null);
 const hoverInfo = ref(null);
 
 const mousePos = ref({ x: 0, y: 0 });
+
+function handleSelection({ category, mode }) {
+  selectedCategory.value = category
+  selectedMode.value = mode
+}
 
 watch(selectedPalette, (newPalette) => {
   if (!map.value) return;
@@ -77,6 +96,10 @@ watch(selectedPalette, (newPalette) => {
     ]);
 });
 
+watch(layer, (newLayer) => {
+  applyLayer(newLayer)
+})
+
 onMounted(() => {
   map.value = new maplibregl.Map({
     container: 'map-container',
@@ -87,9 +110,6 @@ onMounted(() => {
 
   map.value.on('load', () => {
 
-    // Change Germany's color specifically
-    
-    
     map.value.setPaintProperty('countries-fill', 'fill-color', [
       'match',
       ['get', 'ADM0_A3'],
@@ -97,73 +117,7 @@ onMounted(() => {
       '#e0e0e0' 
     ]);
     
-
-    /*
-    map.setPaintProperty('countries-fill', 'fill-opacity', 1);
-
-    // Add Bundesländer borders and labels
-    map.addSource('bundeslaender', {
-      type: 'geojson',
-      data: 'https://raw.githubusercontent.com/isellsoap/deutschlandGeoJSON/main/2_bundeslaender/1_sehr_hoch.geo.json'
-    });
-
-    map.addLayer({
-      id: 'hamburg-border',
-      type: 'line',
-      source: 'bundeslaender',
-      filter: ['==', ['get', 'name'], 'Hamburg'],
-      paint: {
-        'line-color': '#0000ff',
-        'line-width': 2
-      }
-    })
-    */
-    // ADD TILES !!!!!!!!!!!!!
-      console.log("🟢 Map loaded");
-
-      map.value.addSource("germany-hospital", {
-        type: "vector",
-        url: "pmtiles://http://localhost:8000/tiles/germany_" + layer.value + ".pmtiles" //"pmtiles://http://localhost:8000/tiles/hamburg_hospital_drive.pmtiles"
-      });
-
-      console.log("📦 Source added: supermarket");
-
-      map.value.on("sourcedata", (e) => {
-        if (e.sourceId === "supermarket") {
-          console.log("📡 Supermarket source event:", e);
-
-          if (e.isSourceLoaded) {
-            console.log("✅ Supermarket source fully loaded");
-          }
-        }
-      });
-
-      const colors = palettes[selectedPalette.value]?.colors ?? [];
-      const stops = [0, 2, 5, 10, 30];
-
-      map.value.addLayer({
-      id: "germany-hospital-layer",
-      //type: "circle",
-      type: "fill",
-      source: "germany-hospital",
-      "source-layer": layer.value, // Adjust this to match the actual layer name in your PMTiles
-      paint: {
-        "fill-color": [
-          "interpolate",
-          ["linear"],
-          ["get", "value"],
-          stops[0], colors[0],
-          stops[1], colors[1],
-          stops[2], colors[2],
-          stops[3], colors[3],
-          stops[4], colors[4]
-        ],
-        "fill-opacity": 0.8
-      }
-      }, "countries-label" // Place the supermarket layer below country labels
-      );
-
-      console.log("🎨 Layer added: germany-hospital-layer");
+    applyLayer(layer.value)
     });
 
 
@@ -209,17 +163,61 @@ onMounted(() => {
     );
   });
 });
+
+
+function applyLayer(layerName) {
+  if (!map.value) return
+
+  map.value.addSource("germany-hospital", {
+    type: "vector",
+    url: `pmtiles://http://localhost:8000/tiles/germany_${layerName}.pmtiles`
+  })
+
+  const colors = palettes[selectedPalette.value]?.colors ?? []
+  const stops = [0, 2, 5, 10, 30]
+
+  map.value.addLayer({
+    id: "germany-hospital-layer",
+    type: "fill",
+    source: "germany-hospital",
+    "source-layer": layerName,
+    paint: {
+      "fill-color": [
+        "interpolate",
+        ["linear"],
+        ["get", "value"],
+        stops[0], colors[0],
+        stops[1], colors[1],
+        stops[2], colors[2],
+        stops[3], colors[3],
+        stops[4], colors[4]
+      ],
+      "fill-opacity": 0.8
+    }
+  }, "countries-label")
+}
+
 </script>
 <style>
-.app {
-  position: relative;
-  width: 100vw;
-  height: 100vh;
+.map-wrapper {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.debug {
+  padding: 8px;
+}
+
+.map-view {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 #map-container {
-  position: absolute;
-  inset: 0;
+  flex: 1;
+  min-height: 0; /* critical */
 }
 
 .legend-stack {
