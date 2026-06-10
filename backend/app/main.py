@@ -257,25 +257,26 @@ def build_all_tiles(city: str):
     for category in Category:
         for mode in Mode:
             output_path = f"/mnt/data/tiles/{city}_{category.value}_{mode.value}.pmtiles"
-            try:
-                build_pmtiles(
-                    {
-                        6: parquet_path_base + "cells_res6.parquet", 
-                        8: parquet_path_base + "cells_res8.parquet", 
-                        10: parquet_path_base + "cells_res10.parquet"
-                    },
-                    output_path,
-                    category.value,
-                    mode.value
-                )
+            if not os.path.exists(output_path):
+                try:
+                    build_pmtiles(
+                        {
+                            6: parquet_path_base + "cells_res6.parquet", 
+                            8: parquet_path_base + "cells_res8.parquet", 
+                            10: parquet_path_base + "cells_res10.parquet"
+                        },
+                        output_path,
+                        category.value,
+                        mode.value
+                    )
 
-            except RuntimeError as e:
+                except RuntimeError as e:
 
-                errors.append({
-                    "category": category.value,
-                    "mode": mode.value,
-                    "error": str(e)
-                })
+                    errors.append({
+                        "category": category.value,
+                        "mode": mode.value,
+                        "error": str(e)
+                    })
 
     if errors:
         return {
