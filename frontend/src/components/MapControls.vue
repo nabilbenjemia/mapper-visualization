@@ -4,10 +4,10 @@
         <select v-model="selectedCategory">
           <option
             v-for="c in categories"
-            :key="c"
-            :value="c"
+            :key="c.key"
+            :value="c.key"
           >
-            {{ c }}
+            {{ c.label }}
           </option>
         </select>
         <span class="chevron" aria-hidden>▾</span>
@@ -17,10 +17,10 @@
         <select v-model="selectedMode">
           <option
             v-for="m in modes"
-            :key="m"
-            :value="m"
+            :key="m.key"
+            :value="m.key"
           >
-            {{ m }}
+            {{ m.label }}
           </option>
         </select>
         <span class="chevron" aria-hidden>▾</span>
@@ -37,14 +37,17 @@ import { ref } from 'vue'
 import { categories } from '../config/categories'
 import { modes } from '../config/modes'
 
-const selectedCategory = ref(categories[0])
-const selectedMode = ref(modes[0])
+const selectedCategory = ref(categories[0].key)
+const selectedMode = ref(modes[0].key)
+
+const emit = defineEmits(['apply'])
 
 function loadTiles() {
-  const pmtilesUrl =
-    `/tiles/${selectedCategory.value}_${selectedMode.value}.pmtiles`
-
-  showPmtiles(pmtilesUrl)
+  console.log('Applying selection:', selectedCategory.value, selectedMode.value)
+  emit('apply', {
+    category: selectedCategory.value,
+    mode: selectedMode.value
+  })
 }
 </script>
 
@@ -82,7 +85,7 @@ function loadTiles() {
 .controls select {
   appearance: none;
   -webkit-appearance: none;
-  padding: 8px 12px;
+  padding: 8px 32px;
   padding-right: 44px; /* increased space for larger chevron */
   border-radius: 8px;
   border: 1px solid #dcdcdc;
@@ -91,6 +94,7 @@ function loadTiles() {
   color: #222;
   min-width: 130px;
   cursor: pointer;
+  max-height: 50px;
 }
 
 /* chevron indicator */
