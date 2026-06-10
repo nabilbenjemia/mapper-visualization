@@ -51,7 +51,8 @@ const layer = computed(() => {
   return `${selectedCategory.value}_${selectedMode.value}`
 })
 /////////////////////////////////////////
-
+const SOURCE_ID = "active-source"
+const LAYER_ID = "active-layer"
 
 const selectedPalette = ref('classic'); 
 const expanded = ref(false);
@@ -74,7 +75,7 @@ watch(selectedPalette, (newPalette) => {
   const stops = [0, 5, 10, 20, 30];
 
   map.value.setPaintProperty(
-    'germany-hospital-layer',
+    LAYER_ID,
     'fill-color',
     [
       'interpolate',
@@ -132,7 +133,7 @@ onMounted(() => {
     }
 
     const features = map.value.queryRenderedFeatures(e.point, {
-      layers: ["germany-hospital-layer"]
+      layers: [LAYER_ID]
     });
 
     const feature = features[0];
@@ -141,14 +142,14 @@ onMounted(() => {
       map.value.getCanvas().style.cursor = "pointer";
 
       hoverInfo.value = {
-        layer: "hospital_drive",
+        layer: layer.value,
         value: feature.properties.value
       };
     } else {
       map.value.getCanvas().style.cursor = "";
 
       hoverInfo.value = {
-        layer: "hospital_drive",
+        layer: layer.value,
         value: 0
       };
     }
@@ -168,7 +169,15 @@ onMounted(() => {
 function applyLayer(layerName) {
   if (!map.value) return
 
-  map.value.addSource("germany-hospital", {
+  if (map.value.getLayer(LAYER_ID)) {
+    map.value.removeLayer(LAYER_ID)
+  }
+
+  if (map.value.getSource(SOURCE_ID)) {
+    map.value.removeSource(SOURCE_ID)
+  }
+
+  map.value.addSource(SOURCE_ID, {
     type: "vector",
     url: `pmtiles://http://localhost:8000/tiles/germany_${layerName}.pmtiles`
   })
@@ -177,9 +186,9 @@ function applyLayer(layerName) {
   const stops = [0, 2, 5, 10, 30]
 
   map.value.addLayer({
-    id: "germany-hospital-layer",
+    id: LAYER_ID,
     type: "fill",
-    source: "germany-hospital",
+    source: SOURCE_ID,
     "source-layer": layerName,
     paint: {
       "fill-color": [
