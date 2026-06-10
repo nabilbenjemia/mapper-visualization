@@ -3,8 +3,8 @@
     <div class="map-view">
 
       <MapControls
-        :categories="categories"
-        :modes="modes"
+        :category="selectedCategory"
+        :mode="selectedMode"
         @apply="handleSelection"
       />
       <div id="map-container"></div>
@@ -44,8 +44,8 @@ import { categories } from '../config/categories'
 import { modes } from '../config/modes'
 
 //////////////////////////////////////////
-const selectedCategory = ref("hospital")
-const selectedMode = ref("drive")
+const selectedCategory = ref(categories[2].key)
+const selectedMode = ref(modes[2].key)
 
 const layer = computed(() => {
   return `${selectedCategory.value}_${selectedMode.value}`

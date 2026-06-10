@@ -37,8 +37,13 @@ import { ref } from 'vue'
 import { categories } from '../config/categories'
 import { modes } from '../config/modes'
 
-const selectedCategory = ref(categories[0].key)
-const selectedMode = ref(modes[0].key)
+const props = defineProps({
+  category: String,
+  mode: String
+})
+
+const selectedCategory = ref(props.category)
+const selectedMode = ref(props.mode)
 
 const emit = defineEmits(['apply'])
 
