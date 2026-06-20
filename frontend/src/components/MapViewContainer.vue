@@ -5,6 +5,7 @@
       map-id="single"
       :category="mapA.category"
       :mode="mapA.mode"
+      :palette="mapA.palette"
       :compare-mode="false"
       @compare="enterCompare"
       @update="val => mapA = val"
@@ -14,22 +15,24 @@
       <MapView
         map-id="mapA"
         class="map-pane"
-        :style="{ width: `${leftWidth}%` }"
+        :style="{ flexBasis: leftWidth + '%' }"
         :category="mapA.category"
         :mode="mapA.mode"
+        :palette="mapA.palette"
         :compare-mode="true"
         @update="val => mapA = val"
         @exit-compare="exitCompare('A', $event)"
       />
-      <div class="compare-divider" 
-        @mousedown="startResize"
-      />
+
+      <div class="compare-divider" @mousedown="startResize" />
+
       <MapView
         map-id="mapB"
         class="map-pane"
-        :style="{ width: `${100 - leftWidth}%` }"
+        :style="{ flexBasis: (100 - leftWidth) + '%' }"
         :category="mapB.category"
         :mode="mapB.mode"
+        :palette="mapB.palette"
         :compare-mode="true"
         @update="val => mapB = val"
         @exit-compare="exitCompare('B', $event)"
@@ -48,10 +51,21 @@ let latestX = 0
 let rafId = null
 
 const layoutMode = ref('single')
-const mapA = ref({ category: 'hospital', mode: 'drive' })
-const mapB = ref({ category: 'default', mode: 'default' })
+
+const mapA = ref({
+  category: 'hospital',
+  mode: 'drive',
+  palette: 'classic'
+})
+
+const mapB = ref({
+  category: 'hospital',
+  mode: 'drive',
+  palette: 'classic'
+})
 
 function enterCompare(payload) {
+  console.log('Entering compare mode with payload:', payload)
   mapA.value = payload
   mapB.value = { ...payload }
   layoutMode.value = 'compare'
@@ -109,13 +123,16 @@ onBeforeUnmount(() => stopResize())
   height: 100%;
   width: 100%;
   display: flex;
+  flex-direction: row;
 }
 
 
 .map-pane {
-  flex: 0 0 auto;
-  min-width: 0;
   height: 100%;
+  flex-grow: 0;
+  flex-shrink: 0;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .compare-divider {

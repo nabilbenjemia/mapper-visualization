@@ -35,34 +35,61 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
 import { categories } from '../config/categories'
 import { modes } from '../config/modes'
+import { watch, computed } from 'vue'
+import { ref } from 'vue'
 
 const props = defineProps({
   category: String,
   mode: String,
+  palette: String,
   compareMode: Boolean
 })
 
 const selectedCategory = ref(props.category)
 const selectedMode = ref(props.mode)
+const selectedPalette = ref(props.palette)
 
-const emit = defineEmits(['apply', 'compare', 'exit-compare'])
+watch(() => props.category, (v) => {
+  if (v != null) selectedCategory.value = v
+})
+
+watch(() => props.mode, (v) => {
+  if (v != null) selectedMode.value = v
+})
+
+watch(() => props.palette, (v) => {
+  if (v != null) selectedPalette.value = v
+})
+
+const emit = defineEmits([
+  'update:category',
+  'update:mode',
+  'update:palette',
+  'apply',
+  'compare',
+  'exit-compare'
+])
+
+watch(() => props.category, v => selectedCategory.value = v)
+watch(() => props.mode, v => selectedMode.value = v)
+watch(() => props.palette, v => selectedPalette.value = v)
+watch(selectedPalette, (v) => emit('update:palette', v) )
 
 function loadTiles() {
-  console.log('Applying selection:', selectedCategory.value, selectedMode.value)
   emit('apply', {
     category: selectedCategory.value,
-    mode: selectedMode.value
+    mode: selectedMode.value,
+    palette: selectedPalette.value
   })
 }
 
 function compare() {
-  console.log('Applying compare with:', selectedCategory.value, selectedMode.value)
   const payload = {
     category: selectedCategory.value,
-    mode: selectedMode.value
+    mode: selectedMode.value,
+    palette: selectedPalette.value
   }
 
   emit('apply', payload)
@@ -70,12 +97,11 @@ function compare() {
 }
 
 function exitCompare() {
-  console.log('Exiting compare with:', selectedCategory.value, selectedMode.value)
-  const payload = {
+  emit('exit-compare', {
     category: selectedCategory.value,
-    mode: selectedMode.value
-  }
-  emit('exit-compare', payload)
+    mode: selectedMode.value,
+    palette: selectedPalette.value
+  })
 }
 </script>
 

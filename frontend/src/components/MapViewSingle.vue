@@ -4,10 +4,12 @@
       <MapControls
         :category="selectedCategory"
         :mode="selectedMode"
-        :compare-mode="compareMode"
+        :palette="selectedPalette"
+        :compare-mode="isCompareMode"
         @apply="handleSelection"
         @compare="handleCompareClick"
         @exit-compare="handleExitCompareClick"
+        @update:palette="selectedPalette = $event"
       />
       <div :id="containerId" class="map-container"></div>
 
@@ -42,28 +44,40 @@ const props = defineProps({
   mapId: { type: String, default: () => `map-${Math.random().toString(36).slice(2, 9)}` },
   category: { type: String, default: null },
   mode: { type: String, default: null },
+  palette: { type: String, default: 'classic' },
   compareMode: { type: Boolean, default: false }
 })
 
-const emit = defineEmits(['update', 'compare', 'exit-compare'])
+const emit = defineEmits([
+  'update:category',
+  'update:mode',
+  'update:palette',
+  'apply',
+  'compare',
+  'exit-compare'
+])
 
 const containerId = computed(() => `map-container-${props.mapId}`)
 //////////////////////////////////////////
 const selectedCategory = ref(props.category ?? categories[2].key)
 const selectedMode = ref(props.mode ?? modes[2].key)
-
+const selectedPalette = ref(props.palette ?? 'classic'); 
+const compareState = ref(null)
+const isCompareMode = computed(() => props.compareMode)
 /////////////////////////////////////////
 const SOURCE_ID = "active-source"
 const LAYER_ID = "active-layer"
 
+const isMapReady = ref(false)
+
 watch(() => props.category, (val) => { if (val != null) selectedCategory.value = val })
 watch(() => props.mode, (val) => { if (val != null) selectedMode.value = val })
+watch(() => props.palette, (val) => { if (val != null) selectedPalette.value = val })
 
 const layer = computed(() => {
   return `${selectedCategory.value}_${selectedMode.value}`
 })
 
-const selectedPalette = ref('classic'); 
 const expanded = ref(false);
 
 const map = ref(null);
@@ -71,52 +85,54 @@ const hoverInfo = ref(null);
 
 const mousePos = ref({ x: 0, y: 0 });
 
-function handleSelection({ category, mode }) {
+function handleSelection({ category, mode, palette }) {
   selectedCategory.value = category
   selectedMode.value = mode
-  emit('update', { category, mode })
+  selectedPalette.value = palette
 }
 
-function handleCompareClick() {
-  emit('compare', { category: selectedCategory.value, mode: selectedMode.value })
+function handleCompareClick(payload) {
+  compareState.value = payload
+
+  selectedCategory.value = payload.category
+  selectedMode.value = payload.mode
+  selectedPalette.value = payload.palette
+
+  emit('compare', payload)
 }
 
-function handleExitCompareClick() {
-  emit('exit-compare', { category: selectedCategory.value, mode: selectedMode.value })
+function handleExitCompareClick(payload) {
+  compareState.value = null
+
+  selectedCategory.value = payload.category
+  selectedMode.value = payload.mode
+  selectedPalette.value = payload.palette
+
+  emit('exit-compare', payload)
 }
 
 watch(selectedPalette, (newPalette) => {
-  if (!map.value) return;
+  if (!map.value || !map.value.getLayer(LAYER_ID)) return
 
-  const colors = palettes[newPalette]?.colors || [];
+  const colors = palettes[newPalette]?.colors || []
+  const stops = [0, 5, 10, 20, 30]
 
-  const stops = [0, 5, 10, 20, 30];
+  map.value.setPaintProperty(LAYER_ID, "fill-color", [
+    "interpolate",
+    ["linear"],
+    ["get", "value"],
+    stops[0], colors[0],
+    stops[1], colors[1],
+    stops[2], colors[2],
+    stops[3], colors[3],
+    stops[4], colors[4]
+  ])
+})
 
-  map.value.setPaintProperty(
-    LAYER_ID,
-    'fill-color',
-    [
-      'interpolate',
-      ['linear'],
-      ['get', 'value'],
-      stops[0], colors[0],
-      stops[1], colors[1],
-      stops[2], colors[2],
-      stops[3], colors[3],
-      stops[4], colors[4]
-    ]
-  );
-
-  map.value.setPaintProperty('countries-fill', 'fill-color', [
-      'match',
-      ['get', 'ADM0_A3'],
-      'DEU', palettes[selectedPalette.value].colors[0],   
-      '#e0e0e0' 
-    ]);
-});
-
-watch(layer, (newLayer) => {
-  applyLayer(newLayer)
+watch(layer, (val) => {
+  if (!isMapReady.value) return
+  if (!val) return
+  applyLayer(val)
 })
 
 onMounted(() => {
@@ -128,7 +144,7 @@ onMounted(() => {
   });
 
   map.value.on('load', () => {
-
+    isMapReady.value = true
     map.value.setPaintProperty('countries-fill', 'fill-color', [
       'match',
       ['get', 'ADM0_A3'],
@@ -187,8 +203,11 @@ onBeforeUnmount(() => {
   map.value?.remove() 
 })
 
+const sourceUrl = computed(() =>
+  `pmtiles://http://localhost:8000/tiles/germany_${layer.value}.pmtiles`
+)
 
-function applyLayer(layerName) {
+function setSource(layerName) {
   if (!map.value) return
 
   if (map.value.getLayer(LAYER_ID)) {
@@ -201,9 +220,11 @@ function applyLayer(layerName) {
 
   map.value.addSource(SOURCE_ID, {
     type: "vector",
-    url: `pmtiles://http://localhost:8000/tiles/germany_${layerName}.pmtiles`
+    url: sourceUrl.value
   })
+}
 
+function setLayer(layerName) {
   const colors = palettes[selectedPalette.value]?.colors ?? []
   const stops = [0, 2, 5, 10, 30]
 
@@ -226,6 +247,11 @@ function applyLayer(layerName) {
       "fill-opacity": 0.8
     }
   }, "countries-label")
+}
+
+function applyLayer(layerName) {
+  setSource(layerName)
+  setLayer(layerName)
 }
 
 </script>
