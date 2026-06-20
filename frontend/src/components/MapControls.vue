@@ -29,6 +29,8 @@
       <button class="ok-button" @click="loadTiles">
         Select
       </button>
+      <button class="compare-button" v-if="!compareMode" @click="compare">Compare</button>
+      <button class="compare-button" v-else @click="exitCompare">Exit</button>
     </div>
 </template>
 
@@ -39,13 +41,14 @@ import { modes } from '../config/modes'
 
 const props = defineProps({
   category: String,
-  mode: String
+  mode: String,
+  compareMode: Boolean
 })
 
 const selectedCategory = ref(props.category)
 const selectedMode = ref(props.mode)
 
-const emit = defineEmits(['apply'])
+const emit = defineEmits(['apply', 'compare', 'exit-compare'])
 
 function loadTiles() {
   console.log('Applying selection:', selectedCategory.value, selectedMode.value)
@@ -53,6 +56,26 @@ function loadTiles() {
     category: selectedCategory.value,
     mode: selectedMode.value
   })
+}
+
+function compare() {
+  console.log('Applying compare with:', selectedCategory.value, selectedMode.value)
+  const payload = {
+    category: selectedCategory.value,
+    mode: selectedMode.value
+  }
+
+  emit('apply', payload)
+  emit('compare', payload)
+}
+
+function exitCompare() {
+  console.log('Exiting compare with:', selectedCategory.value, selectedMode.value)
+  const payload = {
+    category: selectedCategory.value,
+    mode: selectedMode.value
+  }
+  emit('exit-compare', payload)
 }
 </script>
 
@@ -139,5 +162,21 @@ function loadTiles() {
 .ok-button:active {
   transform: translateY(0);
   box-shadow: 0 6px 12px rgba(25,118,210,0.16);
+}
+
+.compare-button {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: rgba(25,118,210,0.16) solid 1px;
+  font-weight: 600;
+  color: #1976d2;
+  cursor: pointer;
+  box-shadow: 0 6px 12px rgba(85,85,85,0.18);
+  transition: transform 0.08s ease, box-shadow 0.12s ease;
+}
+
+.compare-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(85,85,85,0.2);
 }
 </style>
