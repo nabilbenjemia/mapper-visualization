@@ -1,13 +1,13 @@
 <script setup>
 import Header from './components/Header.vue';
-import MapView from './components/MapView.vue'
+import MapViewContainer from './components/MapViewContainer.vue';
 </script>
 
 <template>
   <div class="app">
     <Header class="app-header" />
     <main class="app-main">
-      <MapView />
+      <MapViewContainer />
     </main>
   </div>
 </template>
