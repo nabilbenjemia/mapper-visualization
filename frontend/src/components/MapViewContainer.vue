@@ -44,6 +44,8 @@ import MapView from './MapViewSingle.vue'
 
 const leftWidth = ref(50) 
 let isResizing = false
+let latestX = 0
+let rafId = null
 
 const layoutMode = ref('single')
 const mapA = ref({ category: 'hospital', mode: 'drive' })
@@ -61,28 +63,38 @@ function exitCompare(source, payload) {
 }
 
 
-
-function startResize(e) {
+function startResize() {
   isResizing = true
-  window.addEventListener('mousemove', resize)
+  window.addEventListener('mousemove', onMove)
   window.addEventListener('mouseup', stopResize)
 }
 
-function resize(e) {
-  if (!isResizing) return
+function onMove(e) {
+  latestX = e.clientX
 
-  const containerWidth = window.innerWidth
-  const percent = (e.clientX / containerWidth) * 100
+  if (!rafId) {
+    rafId = requestAnimationFrame(updateWidth)
+  }
+}
 
-  // clamp so it doesn't collapse
+function updateWidth() {
+  const percent = (latestX / window.innerWidth) * 100
   leftWidth.value = Math.max(10, Math.min(90, percent))
+
+  rafId = null
 }
 
 function stopResize() {
   isResizing = false
-  window.removeEventListener('mousemove', resize)
+  window.removeEventListener('mousemove', onMove)
   window.removeEventListener('mouseup', stopResize)
+
+  if (rafId) {
+    cancelAnimationFrame(rafId)
+    rafId = null
+  }
 }
+
 
 onBeforeUnmount(() => stopResize())
 </script>
@@ -106,6 +118,16 @@ onBeforeUnmount(() => stopResize())
   height: 100%;
 }
 
-.compare-divider { width: 5px; background: white; flex: 0 0 auto; }
-.compare-divider:hover { cursor: col-resize; }
+.compare-divider {
+  width: 6px;
+  cursor: col-resize;
+  background: white;
+  z-index: 10;
+  user-select: none;
+  flex: 0 0 auto;
+}
+
+.compare-divider:hover {
+  cursor: col-resize;
+}
 </style>
