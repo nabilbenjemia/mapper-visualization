@@ -1,13 +1,15 @@
 <template>
   <div class="map-wrapper">
     <div class="map-view">
-
       <MapControls
         :category="selectedCategory"
         :mode="selectedMode"
+        :compare-mode="compareMode"
         @apply="handleSelection"
+        @compare="handleCompareClick"
+        @exit-compare="handleExitCompareClick"
       />
-      <div id="map-container"></div>
+      <div :id="containerId" class="map-container"></div>
 
       <div class="legend-stack">
         <PaletteLegend
@@ -18,14 +20,8 @@
       </div>
     </div>
 
-    <div
-      v-if="hoverInfo"
-      class="hover-tooltip"
-      :style="{
-        left: mousePos.x + 12 + 'px',
-        top: mousePos.y + 12 + 'px'
-      }"
-    >
+    <div v-if="hoverInfo" class="hover-tooltip"
+      :style="{ left: mousePos.x + 12 + 'px', top: mousePos.y + 12 + 'px' }">
       <div><b>Layer:</b> {{ hoverInfo.layer }}</div>
       <div><b>Value:</b> {{ hoverInfo.value }}</div>
     </div>
@@ -33,26 +29,39 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch, computed } from 'vue'
+import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue'
 import MapControls from './MapControls.vue'
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { palettes } from '../config/palettes';
+import { palettes } from '../config/palettes.js';
 import PaletteLegend from './PaletteLegend.vue';
-import SettingsToolbar from './SettingsToolbar.vue';
-import { categories } from '../config/categories'
-import { modes } from '../config/modes'
+import { categories } from '../config/categories.js'
+import { modes } from '../config/modes.js'
 
+const props = defineProps({
+  mapId: { type: String, default: () => `map-${Math.random().toString(36).slice(2, 9)}` },
+  category: { type: String, default: null },
+  mode: { type: String, default: null },
+  compareMode: { type: Boolean, default: false }
+})
+
+const emit = defineEmits(['update', 'compare', 'exit-compare'])
+
+const containerId = computed(() => `map-container-${props.mapId}`)
 //////////////////////////////////////////
-const selectedCategory = ref(categories[2].key)
-const selectedMode = ref(modes[2].key)
+const selectedCategory = ref(props.category ?? categories[2].key)
+const selectedMode = ref(props.mode ?? modes[2].key)
+
+/////////////////////////////////////////
+const SOURCE_ID = "active-source"
+const LAYER_ID = "active-layer"
+
+watch(() => props.category, (val) => { if (val != null) selectedCategory.value = val })
+watch(() => props.mode, (val) => { if (val != null) selectedMode.value = val })
 
 const layer = computed(() => {
   return `${selectedCategory.value}_${selectedMode.value}`
 })
-/////////////////////////////////////////
-const SOURCE_ID = "active-source"
-const LAYER_ID = "active-layer"
 
 const selectedPalette = ref('classic'); 
 const expanded = ref(false);
@@ -65,6 +74,15 @@ const mousePos = ref({ x: 0, y: 0 });
 function handleSelection({ category, mode }) {
   selectedCategory.value = category
   selectedMode.value = mode
+  emit('update', { category, mode })
+}
+
+function handleCompareClick() {
+  emit('compare', { category: selectedCategory.value, mode: selectedMode.value })
+}
+
+function handleExitCompareClick() {
+  emit('exit-compare', { category: selectedCategory.value, mode: selectedMode.value })
 }
 
 watch(selectedPalette, (newPalette) => {
@@ -103,10 +121,10 @@ watch(layer, (newLayer) => {
 
 onMounted(() => {
   map.value = new maplibregl.Map({
-    container: 'map-container',
+    container: containerId.value,
     style: 'https://demotiles.maplibre.org/style.json',
     center: [10.4097, 51.4938],/*[10.4515, 51.1657]*/
-    zoom: 5.7 /*5.5*/
+    zoom: 5.3
   });
 
   map.value.on('load', () => {
@@ -165,6 +183,10 @@ onMounted(() => {
   });
 });
 
+onBeforeUnmount(() => {
+  map.value?.remove() 
+})
+
 
 function applyLayer(layerName) {
   if (!map.value) return
@@ -210,8 +232,12 @@ function applyLayer(layerName) {
 <style>
 .map-wrapper {
   height: 100%;
+  width: 100%;
+  min-height: 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
+  position: relative; 
 }
 
 .debug {
@@ -224,7 +250,7 @@ function applyLayer(layerName) {
   flex-direction: column;
 }
 
-#map-container {
+.map-container {
   flex: 1;
   min-height: 0; /* critical */
 }
