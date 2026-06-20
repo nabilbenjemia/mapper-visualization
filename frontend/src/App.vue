@@ -1,13 +1,19 @@
 <script setup>
+import { ref } from 'vue';
 import Header from './components/Header.vue';
 import MapViewContainer from './components/MapViewContainer.vue';
+
+const homeKey = ref(0);
+function goHome() {
+  homeKey.value += 1; 
+}
 </script>
 
 <template>
   <div class="app">
-    <Header class="app-header" />
+    <Header class="app-header" @go-home="goHome"/>
     <main class="app-main">
-      <MapViewContainer />
+      <MapViewContainer :key="homeKey"/>
     </main>
   </div>
 </template>
