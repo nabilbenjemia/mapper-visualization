@@ -39,6 +39,7 @@ import { palettes } from '../config/palettes.js';
 import PaletteLegend from './PaletteLegend.vue';
 import { categories } from '../config/categories.js'
 import { modes } from '../config/modes.js'
+import { useThemeStore } from '../stores/theme.js';
 
 const props = defineProps({
   mapId: { type: String, default: () => `map-${Math.random().toString(36).slice(2, 9)}` },
@@ -57,14 +58,16 @@ const emit = defineEmits([
   'exit-compare'
 ])
 
+const theme = useThemeStore()
+
 const containerId = computed(() => `map-container-${props.mapId}`)
-//////////////////////////////////////////
+
 const selectedCategory = ref(props.category ?? categories[2].key)
 const selectedMode = ref(props.mode ?? modes[2].key)
 const selectedPalette = ref(props.palette ?? 'classic'); 
 const compareState = ref(null)
 const isCompareMode = computed(() => props.compareMode)
-/////////////////////////////////////////
+
 const SOURCE_ID = "active-source"
 const LAYER_ID = "active-layer"
 
@@ -135,22 +138,54 @@ watch(layer, (val) => {
   applyLayer(val)
 })
 
+watch(
+  () => theme.dark,
+  (dark) => {
+    if (!map.value) return
+
+    map.value.setStyle(
+       dark ? 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json' : 'https://tiles.openfreemap.org/styles/liberty',
+    )
+  }
+)
+
 onMounted(() => {
   map.value = new maplibregl.Map({
     container: containerId.value,
-    style: 'https://demotiles.maplibre.org/style.json',
+    style: 'https://tiles.openfreemap.org/styles/liberty',
     center: [10.4097, 51.4938],/*[10.4515, 51.1657]*/
     zoom: 5.3
   });
 
   map.value.on('load', () => {
     isMapReady.value = true
-    map.value.setPaintProperty('countries-fill', 'fill-color', [
-      'match',
-      ['get', 'ADM0_A3'],
-      'DEU', palettes[selectedPalette.value].colors[0],  
-      '#e0e0e0' 
-    ]);
+
+    map.value.setLayoutProperty("landcover_wood", "visibility", "none");
+    map.value.setLayoutProperty("landcover_grass", "visibility", "none");
+    map.value.setLayoutProperty("park", "visibility", "none");
+    map.value.setLayoutProperty("park_outline", "visibility", "none");
+    map.value.setLayoutProperty("landuse_residential", "visibility", "none");
+    map.value.setLayoutProperty("landcover_sand", "visibility", "none");
+
+    map.value.addSource("countries", {
+      type: "geojson",
+      data: "/countries.geojson"
+    });
+
+    map.value.addLayer({
+      id: "countries-fill",
+      type: "fill",
+      source: "countries",
+      paint: {
+        "fill-color": [
+          "match",
+          ["get", "id"],
+          "DEU", palettes[selectedPalette.value].colors[0],
+          "#00000000"
+        ],
+        "fill-opacity": 0.4
+      }
+    });
     
     applyLayer(layer.value)
     });
@@ -228,6 +263,10 @@ function setLayer(layerName) {
   const colors = palettes[selectedPalette.value]?.colors ?? []
   const stops = [0, 2, 5, 10, 30]
 
+  const firstSymbolLayer = map.value
+    .getStyle()
+    .layers.find(layer => layer.type === "symbol")?.id;
+
   map.value.addLayer({
     id: LAYER_ID,
     type: "fill",
@@ -246,7 +285,7 @@ function setLayer(layerName) {
       ],
       "fill-opacity": 0.8
     }
-  }, "countries-label")
+  }, firstSymbolLayer);
 }
 
 function applyLayer(layerName) {
@@ -311,5 +350,11 @@ function applyLayer(layerName) {
   transform: translate(0, 0);
   transition: left 0.05s linear, top 0.05s linear;
 }
+
+  .maplibregl-ctrl-attrib.maplibregl-compact {
+  background-color: var(--bg);
+  color: var(--text);
+}
+
 </style>
 

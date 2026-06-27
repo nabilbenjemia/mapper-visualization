@@ -102,7 +102,7 @@ const otherPalettes = computed(() =>
   border: 1px solid #e5e7eb;
   border-radius: 10px;
 
-  background: white;
+  background: var(--bg);
   cursor: pointer;
 }
 
@@ -116,7 +116,7 @@ const otherPalettes = computed(() =>
   display: flex;
   justify-content: space-between;
   font-size: 12px;
-  color: #6b7280;
+  color: var(--text);
 }
 
 /* each option */
@@ -128,7 +128,7 @@ const otherPalettes = computed(() =>
   border: 1px solid #e5e7eb;
   border-radius: 10px;
 
-  background: white;
+  background: var(--bg);
 }
 
 

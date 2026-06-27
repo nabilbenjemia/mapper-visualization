@@ -118,7 +118,7 @@ function exitCompare() {
   gap: 10px;
   align-items: center;
 
-  background: rgba(255,255,255,0.95);
+  background: var(--bg);
   padding: 10px 14px;
   border-radius: 10px;
   box-shadow: 0 6px 18px rgba(12,18,30,0.14);
@@ -143,9 +143,9 @@ function exitCompare() {
   padding-right: 44px; /* increased space for larger chevron */
   border-radius: 8px;
   border: 1px solid #dcdcdc;
-  background: #fff;
+  background: var(--bg);
   font-size: 14px;
-  color: #222;
+  color: var(--text);
   min-width: 130px;
   cursor: pointer;
   max-height: 50px;
@@ -193,7 +193,7 @@ function exitCompare() {
 .compare-button {
   padding: 8px 14px;
   border-radius: 8px;
-  border: rgba(25,118,210,0.16) solid 1px;
+  border: #1976d2 solid 1px;
   font-weight: 600;
   color: #1976d2;
   cursor: pointer;
