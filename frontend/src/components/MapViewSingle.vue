@@ -176,7 +176,7 @@ watch(
 onMounted(() => {
   map.value = new maplibregl.Map({
     container: containerId.value,
-    style: 'https://tiles.openfreemap.org/styles/liberty',
+    style: theme.dark ? 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json' : 'https://tiles.openfreemap.org/styles/liberty',
     center: [10.4097, 51.4938],/*[10.4515, 51.1657]*/
     zoom: 5.3
   });
