@@ -116,6 +116,24 @@ function handleExitCompareClick(payload) {
 
 watch(selectedPalette, (newPalette) => {
   if (!map.value || !map.value.getLayer(LAYER_ID)) return
+  
+  map.value.setPaintProperty(
+    "countries-fill",
+    "fill-color",
+    [
+      "case",
+      ["==", ["get", "name"], "Germany"],
+      palettes[selectedPalette.value].colors[0],
+      "#00000000"
+    ]
+  )
+  
+  
+  map.value.setPaintProperty(
+    "countries-fill",
+    "fill-opacity",
+    1
+  )
 
   const colors = palettes[newPalette]?.colors || []
   const stops = [0, 5, 10, 20, 30]
@@ -145,7 +163,13 @@ watch(
 
     map.value.setStyle(
        dark ? 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json' : 'https://tiles.openfreemap.org/styles/liberty',
-    )
+    );
+
+    map.value.once("styledata", () => {
+      setTimeout(() => {
+        addCustomLayers();
+      }, 0);
+    });
   }
 )
 
@@ -159,6 +183,7 @@ onMounted(() => {
 
   map.value.on('load', () => {
     isMapReady.value = true
+    addCustomLayers();
 
     map.value.setLayoutProperty("landcover_wood", "visibility", "none");
     map.value.setLayoutProperty("landcover_grass", "visibility", "none");
@@ -166,28 +191,7 @@ onMounted(() => {
     map.value.setLayoutProperty("park_outline", "visibility", "none");
     map.value.setLayoutProperty("landuse_residential", "visibility", "none");
     map.value.setLayoutProperty("landcover_sand", "visibility", "none");
-
-    map.value.addSource("countries", {
-      type: "geojson",
-      data: "/countries.geojson"
-    });
-
-    map.value.addLayer({
-      id: "countries-fill",
-      type: "fill",
-      source: "countries",
-      paint: {
-        "fill-color": [
-          "match",
-          ["get", "id"],
-          "DEU", palettes[selectedPalette.value].colors[0],
-          "#00000000"
-        ],
-        "fill-opacity": 0.4
-      }
-    });
     
-    applyLayer(layer.value)
     });
 
 
@@ -263,9 +267,7 @@ function setLayer(layerName) {
   const colors = palettes[selectedPalette.value]?.colors ?? []
   const stops = [0, 2, 5, 10, 30]
 
-  const firstSymbolLayer = map.value
-    .getStyle()
-    .layers.find(layer => layer.type === "symbol")?.id;
+  const firstSymbolLayer = getFirstSymbolLayerId();
 
   map.value.addLayer({
     id: LAYER_ID,
@@ -293,6 +295,45 @@ function applyLayer(layerName) {
   setLayer(layerName)
 }
 
+function getFirstSymbolLayerId() {
+  return map.value
+    .getStyle()
+    .layers.find(l => l.type === "symbol")?.id
+}
+
+function addCustomLayers() {
+  const m = map.value;
+  if (!m) return;
+
+  if (!m.getSource("countries")) {
+    m.addSource("countries", {
+      type: "geojson",
+      data: "/countries.geojson"
+    });
+  }
+
+  const firstSymbolLayer = getFirstSymbolLayerId();
+
+  map.value.addLayer({
+      id: "countries-fill",
+      type: "fill",
+      source: "countries",
+      paint: {
+        "fill-color": [
+          "match",
+          ["get", "name"],
+          "Germany",
+          palettes[selectedPalette.value].colors[0],
+          "#00000000"
+        ],
+        "fill-opacity": 1
+      }
+    }, firstSymbolLayer);
+
+    applyLayer(layer.value);
+  }
+
+  
 </script>
 <style>
 .map-wrapper {
@@ -351,7 +392,7 @@ function applyLayer(layerName) {
   transition: left 0.05s linear, top 0.05s linear;
 }
 
-  .maplibregl-ctrl-attrib.maplibregl-compact {
+.maplibregl-ctrl-attrib.maplibregl-compact {
   background-color: var(--bg);
   color: var(--text);
 }
