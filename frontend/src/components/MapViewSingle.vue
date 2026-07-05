@@ -356,5 +356,10 @@ function applyLayer(layerName) {
   color: var(--text);
 }
 
+.maplibregl-ctrl-attrib a{
+  color: var(--text);
+}
+
+
 </style>
 
