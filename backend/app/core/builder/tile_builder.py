@@ -9,10 +9,9 @@ from utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-csv_result_path = "/mnt/data/tiles/results.csv"
-
 def build_pmtiles(parquet_paths: dict, output_path: str, category: str, mode: str):
     start_time = time.time()
+    csv_result_path = os.path.dirname(output_path) + "/results.csv"
     logger.info(f"Building PMTiles for category={category}, mode={mode}")
 
     zoom_config = {
@@ -25,6 +24,7 @@ def build_pmtiles(parquet_paths: dict, output_path: str, category: str, mode: st
     mbtiles_files = []
     
     if not os.path.exists(csv_result_path):
+        os.makedirs(os.path.dirname(csv_result_path), exist_ok=True)
         with open(csv_result_path, "w", newline="") as f:
             f.write("category,mode,time_seconds,size_mb,status,error_message\n")
     

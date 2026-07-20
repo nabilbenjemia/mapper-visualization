@@ -13,6 +13,8 @@ from config.modes import Mode
 from core.pipeline.parquet_loader import load_layer
 from core.pipeline.h3_to_geo import h3_to_geometry
 from core.builder.tile_builder import build_pmtiles
+from pydantic import BaseModel
+from scripts.aggregate_h3 import create_resolution_parquets
 
 #FILE_PATH = "/mnt/data/h3_geojson/hamburg_fuel_station_drive.geojson" 
 FILE_PATH = "/mnt/data/h3_geojson/full.geojson"
@@ -129,52 +131,7 @@ def load_geojson_dir():
                 
 @app.on_event("startup")
 def load_data():
-    global geojson_data
-    city = "hamburg"
-    
-    """
-    if True:  # os.path.exists(FILE_PATH):
-        load_geojson_dir()
-        print("GeoJSON files loaded:", list(GEOJSON_CACHE.keys()))
-    else:
-    
-        print("Generating GeoJSON from parquet...")
-        start_time = time.time()
-        df = pd.read_parquet("/mnt/data/results/2026-02-19T14-11-24Z_germany-hamburg_ee98d3/cells.parquet")
-
-        modes = [
-        "walk",
-        "bike",
-        "drive",
-        "transit",
-        "transit_bus",
-        "transit_rail",
-        "walk_transit",
-        #"walk_transit_bus",
-        #"walk_transit_rail"
-        ]
-        
-        for mode in modes:
-            geojson_data = convert_to_geojson(df, mode=mode)
-
-            mode_file_path = f"/mnt/data/h3_geojson/{city}/{mode}.geojson"
-            os.makedirs(os.path.dirname(mode_file_path), exist_ok=True)
-            print("Saving GeoJSON to file: ", mode_file_path)
-            with open(mode_file_path, "w") as f:
-                json.dump(geojson_data, f)
-            
-            end_time = time.time()
-            elapsed = end_time - start_time
-            hours = int(elapsed // 3600)
-            minutes = int((elapsed % 3600) // 60)
-            seconds = elapsed % 60
-
-            print(f"GeoJSON {mode} for {city} generated and saved in {f'{hours}h ' if hours else ''} {minutes}m {seconds:.2f}s 🚀")
-"""
-    #print("first feature's H3 index:", geojson_data["features"][0]["properties"]["h3"])
-    #print("first feature's geometry:", geojson_data["features"][0]["geometry"])
-    #print("first feature's properties:", geojson_data["features"][0]["properties"])
-    #print("first feature's centroid:", (geojson_data["features"][0]["properties"]["lng"], geojson_data["features"][0]["properties"]["lat"]))
+    global geojson_data    
     print("Ready!")
 
 @app.get("/geojson/{mode}")
@@ -185,30 +142,6 @@ def get_geojson(mode: str):
         return {"error": "mode not found"}
 
     return data
-'''
-@app.get("/geojson")
-def get_geojson():
-    print("Total features in GeoJSON:", len(geojson_data["features"]))
-    return {
-        "type": "FeatureCollection",
-        "features": geojson_data["features"] #[:2000] #20000
-    }
-
-   
-@app.get("/properties")
-def get_properties():
-    return {"properties": list(geojson_data["features"][0]["properties"].keys())}
-
-@app.get("/properties/{property_name_suffix}")
-def get_property(property_name_suffix: str):
-    matches = [
-        p for p in geojson_data["features"][0]["properties"].keys()
-        if p.endswith(property_name_suffix)
-    ]
-    return {"matches": matches}
-
-app.mount("/data/h3_geojson/", StaticFiles(directory="/mnt/data/h3_geojson/"), name="data")
-'''
 
 @app.get("/health")
 def health():
@@ -241,22 +174,24 @@ def test_geo(h3_index: str):
         "center": {"lng": center[0], "lat": center[1]}
     }
     
-@app.post("/build-tiles/{city}")
-def build_all_tiles(city: str):
-    if city.lower() == "hamburg":
-        parquet_path_base = "/mnt/data/results/2026-02-19T14-11-24Z_germany-hamburg_ee98d3/"
-    elif city.lower() == "bayern":
-        parquet_path_base = "/mnt/data/results/2026-04-03T10-18-10Z_germany-bayern_bfc46a/"
-    elif city.lower() == "germany":
-        parquet_path_base = "/mnt/data/results/2026-03-18T14-34-36Z_europe-germany_b9dada/"
-    else:
-        return {"status": "error", "message": f"City {city} not found"}
+@app.post("/build-tiles/{city}/{dataset}")
+def build_all_tiles(city: str, dataset: str):
+    
+    parquet_path_base = f"/mnt/data/results/{dataset}/"
+    
+    if not os.path.isdir(parquet_path_base):
+        return {
+            "status": "error",
+            "message": f"Dataset '{dataset}' not found."
+        }
+        
+    create_resolution_parquets(dataset)
     
     errors = []
     
     for category in Category:
         for mode in Mode:
-            output_path = f"/mnt/data/tiles/{city}_{category.value}_{mode.value}.pmtiles"
+            output_path = f"/mnt/data/tiles/{city}/{dataset}/{city}_{category.value}_{mode.value}.pmtiles"
             if not os.path.exists(output_path):
                 try:
                     build_pmtiles(
@@ -289,18 +224,17 @@ def build_all_tiles(city: str):
         "message": f"All tiles generated for {city}"
     }
     
-@app.post("/build-tiles/{city}/{category}/{mode}")
-def build_tiles(city: str, category: str, mode: str, background_tasks: BackgroundTasks):
-    if city.lower() == "hamburg":
-        parquet_path_base = "/mnt/data/results/2026-02-19T14-11-24Z_germany-hamburg_ee98d3/"
-    elif city.lower() == "bayern":
-        parquet_path_base = "/mnt/data/results/2026-04-03T10-18-10Z_germany-bayern_bfc46a/"
-    elif city.lower() == "germany":
-        parquet_path_base = "/mnt/data/results/2026-03-18T14-34-36Z_europe-germany_b9dada/"
-    else:
-        return {"status": "error", "message": f"City {city} not found"}
+@app.post("/build-tiles/{city}/{dataset}/{category}/{mode}")
+def build_tiles(city: str, dataset: str, category: str, mode: str, background_tasks: BackgroundTasks):
+    parquet_path_base = f"/mnt/data/results/{dataset}/"
     
-    output_path = f"/mnt/data/tiles/{city}_{category}_{mode}.pmtiles"
+    if not os.path.isdir(parquet_path_base):
+        return {
+            "status": "error",
+            "message": f"Dataset '{dataset}' not found."
+        }
+    
+    output_path = f"/mnt/data/tiles/{city}/{dataset}/{city}_{category}_{mode}.pmtiles"
 
     try:
         background_tasks.add_task(build_pmtiles, {6: parquet_path_base + "cells_res6.parquet", 8: parquet_path_base + "cells_res8.parquet", 10: parquet_path_base + "cells_res10.parquet"}, output_path, category, mode)
