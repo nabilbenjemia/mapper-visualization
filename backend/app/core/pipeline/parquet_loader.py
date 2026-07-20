@@ -8,6 +8,7 @@ logger = get_logger(__name__)
 con = duckdb.connect()
 
 def load_layer(parquet_path: str, category: str, mode: str):
+    print(f"Loading layer for category: {category}, mode: {mode} from {parquet_path}")
     if category not in get_available_categories():
         raise ValueError(f"Category {category} not found in dataset")
     if mode not in get_available_modes():
