@@ -1,6 +1,6 @@
 <script setup>
 import tumLogo from '../assets/tum_logo.png';
-import mapperLogo from '../assets/mapper_logo_long.svg';
+import mapperLogo from '../assets/mapper_logo.png';
 import { useThemeStore } from '../stores/theme';
 
 const theme = useThemeStore();

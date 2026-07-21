@@ -4,6 +4,7 @@
       <MapControls
         :category="selectedCategory"
         :mode="selectedMode"
+        :source="selectedSource"
         :palette="selectedPalette"
         :compare-mode="isCompareMode"
         @apply="handleSelection"
@@ -39,12 +40,14 @@ import { palettes } from '../config/palettes.js';
 import PaletteLegend from './PaletteLegend.vue';
 import { categories } from '../config/categories.js'
 import { modes } from '../config/modes.js'
+import { sources } from '../config/sources.js'
 import { useThemeStore } from '../stores/theme.js';
 
 const props = defineProps({
   mapId: { type: String, default: () => `map-${Math.random().toString(36).slice(2, 9)}` },
   category: { type: String, default: null },
   mode: { type: String, default: null },
+  source: { type: String, default: null },
   palette: { type: String, default: 'classic' },
   compareMode: { type: Boolean, default: false }
 })
@@ -52,6 +55,7 @@ const props = defineProps({
 const emit = defineEmits([
   'update:category',
   'update:mode',
+  'update:source',
   'update:palette',
   'apply',
   'compare',
@@ -64,6 +68,7 @@ const containerId = computed(() => `map-container-${props.mapId}`)
 
 const selectedCategory = ref(props.category ?? categories[2].key)
 const selectedMode = ref(props.mode ?? modes[2].key)
+const selectedSource = ref(props.source ?? '2026-06-30T05-14-58Z_europe-germany_e046f3')
 const selectedPalette = ref(props.palette ?? 'classic'); 
 const compareState = ref(null)
 const isCompareMode = computed(() => props.compareMode)
@@ -75,6 +80,7 @@ const isMapReady = ref(false)
 
 watch(() => props.category, (val) => { if (val != null) selectedCategory.value = val })
 watch(() => props.mode, (val) => { if (val != null) selectedMode.value = val })
+watch(() => props.source, (val) => { if (val != null) selectedSource.value = val })
 watch(() => props.palette, (val) => { if (val != null) selectedPalette.value = val })
 
 const layer = computed(() => {
@@ -88,9 +94,14 @@ const hoverInfo = ref(null);
 
 const mousePos = ref({ x: 0, y: 0 });
 
-function handleSelection({ category, mode, palette }) {
+const selectedSourceInfo = computed(() =>
+  sources.find(s => s.key === selectedSource.value)
+)
+
+function handleSelection({ category, mode, source, palette }) {
   selectedCategory.value = category
   selectedMode.value = mode
+  selectedSource.value = source
   selectedPalette.value = palette
 }
 
@@ -99,6 +110,7 @@ function handleCompareClick(payload) {
 
   selectedCategory.value = payload.category
   selectedMode.value = payload.mode
+  selectedSource.value = payload.source
   selectedPalette.value = payload.palette
 
   emit('compare', payload)
@@ -109,6 +121,7 @@ function handleExitCompareClick(payload) {
 
   selectedCategory.value = payload.category
   selectedMode.value = payload.mode
+  selectedSource.value = payload.source
   selectedPalette.value = payload.palette
 
   emit('exit-compare', payload)
@@ -150,10 +163,14 @@ watch(selectedPalette, (newPalette) => {
   ])
 })
 
-watch(layer, (val) => {
+const sourceUrl = computed(() => {
+  const source = selectedSourceInfo.value
+  return `pmtiles://http://localhost:8000/tiles/${source.region}/${source.key}/${source.region}_${layer.value}.pmtiles`
+})
+
+watch(sourceUrl, (url) => {
   if (!isMapReady.value) return
-  if (!val) return
-  applyLayer(val)
+  applyLayer(url)
 })
 
 watch(
@@ -242,11 +259,9 @@ onBeforeUnmount(() => {
   map.value?.remove() 
 })
 
-const sourceUrl = computed(() =>
-  `pmtiles://http://localhost:8000/tiles/germany_${layer.value}.pmtiles`
-)
 
 function setSource(layerName) {
+  console.log("Setting source for layer:", layerName, " with source:", selectedSource.value);
   if (!map.value) return
 
   if (map.value.getLayer(LAYER_ID)) {
@@ -292,7 +307,7 @@ function setLayer(layerName) {
 
 function applyLayer(layerName) {
   setSource(layerName)
-  setLayer(layerName)
+  setLayer(layer.value)
 }
 
 function getFirstSymbolLayerId() {

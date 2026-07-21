@@ -26,6 +26,19 @@
         <span class="chevron" aria-hidden>▾</span>
       </div>
 
+      <div class="select-wrapper">
+        <select v-model="selectedSource">
+          <option
+            v-for="c in sources"
+            :key="c.key"
+            :value="c.key"
+          >
+            {{ c.label }}
+          </option>
+        </select>
+        <span class="chevron" aria-hidden>▾</span>
+      </div>
+
       <button class="ok-button" @click="loadTiles">
         Select
       </button>
@@ -37,18 +50,21 @@
 <script setup>
 import { categories } from '../config/categories'
 import { modes } from '../config/modes'
+import { sources } from '../config/sources'
 import { watch, computed } from 'vue'
 import { ref } from 'vue'
 
 const props = defineProps({
   category: String,
   mode: String,
+  source: String,
   palette: String,
   compareMode: Boolean
 })
 
 const selectedCategory = ref(props.category)
 const selectedMode = ref(props.mode)
+const selectedSource = ref(props.source)
 const selectedPalette = ref(props.palette)
 
 watch(() => props.category, (v) => {
@@ -59,6 +75,10 @@ watch(() => props.mode, (v) => {
   if (v != null) selectedMode.value = v
 })
 
+watch(() => props.source, (v) => {
+  if (v != null) selectedSource.value = v
+})
+
 watch(() => props.palette, (v) => {
   if (v != null) selectedPalette.value = v
 })
@@ -66,6 +86,7 @@ watch(() => props.palette, (v) => {
 const emit = defineEmits([
   'update:category',
   'update:mode',
+  'update:source',
   'update:palette',
   'apply',
   'compare',
@@ -74,13 +95,21 @@ const emit = defineEmits([
 
 watch(() => props.category, v => selectedCategory.value = v)
 watch(() => props.mode, v => selectedMode.value = v)
+watch(() => props.source, v => selectedSource.value = v)
 watch(() => props.palette, v => selectedPalette.value = v)
 watch(selectedPalette, (v) => emit('update:palette', v) )
 
 function loadTiles() {
+  console.log("Loading tiles with selection:", {
+    category: selectedCategory.value,
+    mode: selectedMode.value,
+    source: selectedSource.value,
+    palette: selectedPalette.value
+  });
   emit('apply', {
     category: selectedCategory.value,
     mode: selectedMode.value,
+    source: selectedSource.value,
     palette: selectedPalette.value
   })
 }
@@ -89,6 +118,7 @@ function compare() {
   const payload = {
     category: selectedCategory.value,
     mode: selectedMode.value,
+    source: selectedSource.value,
     palette: selectedPalette.value
   }
 
@@ -100,6 +130,7 @@ function exitCompare() {
   emit('exit-compare', {
     category: selectedCategory.value,
     mode: selectedMode.value,
+    source: selectedSource.value,
     palette: selectedPalette.value
   })
 }
