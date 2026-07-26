@@ -24,3 +24,6 @@ Reconnect later: tmux attach -t tiles
             |-----germany
                     |------2026-03-18T14-34-36Z_europe-germany_b9dada
                     |------2026-06-30T05-14-58Z_europe-germany_e046f3
+
+## Check if a column exists in parquet
+python3 -c "import pyarrow.parquet as pq; print([c for c in pq.read_schema('/mnt/data/results/2026-06-30T05-14-58Z_europe-germany_e046f3/cells_res10.parquet').names if 'poi_embassy_' in c.lower()])"

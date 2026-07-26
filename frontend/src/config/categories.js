@@ -92,7 +92,7 @@ export const categories = [
     { key: "recycling", label: "Recycling" },
     { key: "waste_disposal", label: "Waste Disposal" },
     { key: "shelter", label: "Shelter" },
-    { key: "embassy", label: "Embassy" },
+    /* { key: "embassy", label: "Embassy" }, */ //TODO: embassy does not exist in current databases
     { key: "prison", label: "Prison" },
     { key: "brewery", label: "Brewery" },
     { key: "winery", label: "Winery" },

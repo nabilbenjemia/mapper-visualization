@@ -96,7 +96,7 @@ class Category(str, Enum):
     recycling = "recycling"
     waste_disposal = "waste_disposal"
     shelter = "shelter"
-    embassy = "embassy"
+    #embassy = "embassy" 
     prison = "prison"
     brewery = "brewery"
     winery = "winery",
