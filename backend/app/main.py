@@ -15,6 +15,7 @@ from core.pipeline.h3_to_geo import h3_to_geometry
 from core.builder.tile_builder import build_pmtiles
 from pydantic import BaseModel
 from scripts.aggregate_h3 import create_resolution_parquets
+from core.builder.frontend_metadata import export_frontend_metadata
 
 #FILE_PATH = "/mnt/data/h3_geojson/hamburg_fuel_station_drive.geojson" 
 FILE_PATH = "/mnt/data/h3_geojson/full.geojson"
@@ -187,6 +188,8 @@ def build_all_tiles(city: str, dataset: str):
         
     create_resolution_parquets(dataset)
     
+    export_frontend_metadata(parquet_path_base + "run_manifest.json", f"/mnt/data/tiles/{city}/{dataset}")
+    
     errors = []
     
     for category in Category:
@@ -236,10 +239,23 @@ def build_tiles(city: str, dataset: str, category: str, mode: str, background_ta
     
     output_path = f"/mnt/data/tiles/{city}/{dataset}/{city}_{category}_{mode}.pmtiles"
 
+    create_resolution_parquets(dataset)
+    
+    export_frontend_metadata(parquet_path_base + "run_manifest.json", f"/mnt/data/tiles/{city}/{dataset}")
+    
     try:
-        background_tasks.add_task(build_pmtiles, {6: parquet_path_base + "cells_res6.parquet", 8: parquet_path_base + "cells_res8.parquet", 10: parquet_path_base + "cells_res10.parquet"}, output_path, category, mode)
-        return {"status": "accepted", "message": f"PMTiles build started for {category} {mode}"}
-    except Exception as e:
+        build_pmtiles(
+            {
+                6: parquet_path_base + "cells_res6.parquet", 
+                8: parquet_path_base + "cells_res8.parquet", 
+                10: parquet_path_base + "cells_res10.parquet"
+            },
+            output_path,
+            category,
+            mode
+        )
+
+    except RuntimeError as e:
         return {"status": "error", "message": str(e)}
     
 
