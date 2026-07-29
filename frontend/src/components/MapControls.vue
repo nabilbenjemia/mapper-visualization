@@ -48,13 +48,14 @@
 </template>
 
 <script setup>
-import { categories } from '../config/categories'
-import { modes } from '../config/modes'
+import { categories as categoryConfig } from '../config/categories'
+import { modes as modeConfig } from '../config/modes'
 import { sources } from '../config/sources'
 import { watch, computed } from 'vue'
 import { ref } from 'vue'
 
 const props = defineProps({
+  metadata: Object,
   category: String,
   mode: String,
   source: String,
@@ -98,6 +99,23 @@ watch(() => props.mode, v => selectedMode.value = v)
 watch(() => props.source, v => selectedSource.value = v)
 watch(() => props.palette, v => selectedPalette.value = v)
 watch(selectedPalette, (v) => emit('update:palette', v) )
+watch(selectedSource, (v) => emit('update:source', v))
+
+const categories = computed(() => {
+    if (!props.metadata) return []
+
+    return props.metadata.categories
+        .map(key => categoryConfig.find(c => c.key === key))
+        .filter(Boolean)
+})
+
+const modes = computed(() => {
+    if (!props.metadata) return []
+
+    return props.metadata.modes
+        .map(key => modeConfig.find(m => m.key === key))
+        .filter(Boolean)
+})
 
 function loadTiles() {
   console.log("Loading tiles with selection:", {

@@ -2,6 +2,7 @@
   <div class="map-wrapper">
     <div class="map-view">
       <MapControls
+        :metadata="metadata"
         :category="selectedCategory"
         :mode="selectedMode"
         :source="selectedSource"
@@ -11,6 +12,7 @@
         @compare="handleCompareClick"
         @exit-compare="handleExitCompareClick"
         @update:palette="selectedPalette = $event"
+        @update:source="selectedSource = $event"
       />
       <div :id="containerId" class="map-container"></div>
 
@@ -43,6 +45,8 @@ import { modes } from '../config/modes.js'
 import { sources } from '../config/sources.js'
 import { useThemeStore } from '../stores/theme.js';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+
 const props = defineProps({
   mapId: { type: String, default: () => `map-${Math.random().toString(36).slice(2, 9)}` },
   category: { type: String, default: null },
@@ -72,15 +76,17 @@ const selectedSource = ref(props.source ?? '2026-06-30T05-14-58Z_europe-germany_
 const selectedPalette = ref(props.palette ?? 'classic'); 
 const compareState = ref(null)
 const isCompareMode = computed(() => props.compareMode)
+const metadata = ref(null)
+const isUpdatingMetadata = ref(false)
 
 const SOURCE_ID = "active-source"
 const LAYER_ID = "active-layer"
 
 const isMapReady = ref(false)
 
+watch(() => props.source, (val) => { if (val != null) selectedSource.value = val })
 watch(() => props.category, (val) => { if (val != null) selectedCategory.value = val })
 watch(() => props.mode, (val) => { if (val != null) selectedMode.value = val })
-watch(() => props.source, (val) => { if (val != null) selectedSource.value = val })
 watch(() => props.palette, (val) => { if (val != null) selectedPalette.value = val })
 
 const layer = computed(() => {
@@ -97,6 +103,46 @@ const mousePos = ref({ x: 0, y: 0 });
 const selectedSourceInfo = computed(() =>
   sources.find(s => s.key === selectedSource.value)
 )
+
+async function loadMetadata(sourceKey) {
+  const src = sources.find(s => s.key === sourceKey)
+
+  if (!src) {
+    metadata.value = null
+    return
+  }
+
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/tiles/${src.region}/${src.key}/metadata.json`
+    )
+    
+    if (!response.ok) {
+      throw new Error(`Failed to load metadata (${response.status})`)
+    }
+
+    metadata.value = await response.json()
+
+    const availableCategories = metadata.value.categories || []
+    const availableModes = metadata.value.modes || []
+
+    selectedCategory.value = availableCategories.includes(selectedCategory.value)
+      ? selectedCategory.value
+      : availableCategories[0] || null
+    
+    selectedMode.value = availableModes.includes(selectedMode.value)
+      ? selectedMode.value
+      : availableModes[0] || null
+
+      console.log("Selected category and mode after loading metadata:", {
+        category: selectedCategory.value,
+        mode: selectedMode.value
+      })
+  } catch (err) {
+    console.error(err)
+    metadata.value = null
+  }
+}
 
 function handleSelection({ category, mode, source, palette }) {
   selectedCategory.value = category
@@ -165,13 +211,19 @@ watch(selectedPalette, (newPalette) => {
 
 const sourceUrl = computed(() => {
   const source = selectedSourceInfo.value
+  if (!source) return ''
   return `pmtiles://http://localhost:8000/tiles/${source.region}/${source.key}/${source.region}_${layer.value}.pmtiles`
 })
 
-watch(sourceUrl, (url) => {
-  if (!isMapReady.value) return
-  applyLayer(url)
-})
+watch(
+  [selectedSource, selectedCategory, selectedMode],
+  async () => {
+    if (!isMapReady.value) return
+
+    await loadMetadata(selectedSource.value)
+    applyLayer(sourceUrl.value)
+  }
+)
 
 watch(
   () => theme.dark,
@@ -194,9 +246,11 @@ onMounted(() => {
   map.value = new maplibregl.Map({
     container: containerId.value,
     style: theme.dark ? 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json' : 'https://tiles.openfreemap.org/styles/liberty',
-    center: [10.4097, 51.4938],/*[10.4515, 51.1657]*/
+    center: [10.4097, 51.4938],
     zoom: 5.3
   });
+
+  loadMetadata(selectedSource.value)
 
   map.value.on('load', () => {
     isMapReady.value = true
