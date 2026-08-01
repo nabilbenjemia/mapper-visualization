@@ -16,12 +16,15 @@
       />
       <div :id="containerId" class="map-container"></div>
 
-      <div class="legend-stack">
-        <PaletteLegend
-          :palette="selectedPalette"
-          :selected-palette="selectedPalette"
-          @update="selectedPalette = $event"
-        />
+      <div class="overlay-stack">
+        <DatasetMetadata :metadata="metadata" />
+        <div class="legend-stack">
+          <PaletteLegend
+            :palette="selectedPalette"
+            :selected-palette="selectedPalette"
+            @update="selectedPalette = $event"
+          />
+        </div>
       </div>
     </div>
 
@@ -44,6 +47,7 @@ import { categories } from '../config/categories.js'
 import { modes } from '../config/modes.js'
 import { sources } from '../config/sources.js'
 import { useThemeStore } from '../stores/theme.js';
+import DatasetMetadata from './DatasetInfo.vue'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
@@ -427,19 +431,28 @@ function addCustomLayers() {
 
 .map-container {
   flex: 1;
-  min-height: 0; /* critical */
+  min-height: 0; 
+}
+
+.overlay-stack {
+  position: absolute;
+  width: 200px;
+  left: 20px;
+  bottom: 20px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.overlay-stack > * {
+  width: 100%;
 }
 
 .legend-stack {
-  position: absolute;
-  bottom: 20px;
-  left: 20px;
-
   display: flex;
   flex-direction: column-reverse;
-  gap: 8px;
-
-  overflow: visible;
 }
 
 .palette-list {

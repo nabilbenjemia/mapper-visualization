@@ -1,5 +1,5 @@
 <template>
-  <div class="legend-stack">
+  <div class="palette-legend">
 
     <!-- SELECTED -->
     <div class="legend-container" @click="toggleExpanded">
@@ -82,21 +82,15 @@ const otherPalettes = computed(() =>
 </script>
 
 <style>
-.legend-stack {
-  position: absolute;
-  bottom: 20px;
-  left: 20px;
-
+.palette-legend {
   display: flex;
   flex-direction: column-reverse;
   gap: 8px;
 
   overflow: visible;
-  z-index: 9999;
 }
 
 .legend-container {
-  width: 200px;
   padding: 10px;
 
   border: 1px solid #e5e7eb;
@@ -130,8 +124,6 @@ const otherPalettes = computed(() =>
 
   background: var(--bg);
 }
-
-
 
 .palette-preview {
   width: 100%;
