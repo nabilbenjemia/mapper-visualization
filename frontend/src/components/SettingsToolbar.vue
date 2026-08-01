@@ -32,23 +32,23 @@ function selectPalette(key) {
 <style scoped>
 .settings-toolbar {
   position: absolute;
-  top: 60px;
-  right: 20px;
+  top: 3.75rem;
+  right: 1.25rem;
 
   z-index: 1000;
 
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 0.75rem;
 
   background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
+  border: 0.0625rem solid #e5e7eb;
+  border-radius: 1rem;
 
-  padding: 12px;
+  padding: 0.75rem;
 
   box-shadow:
-    0 4px 12px rgba(0,0,0,0.08),
-    0 2px 4px rgba(0,0,0,0.04);
+    0 0.25rem 0.75rem rgba(0,0,0,0.08),
+    0 0.125rem 0.25rem rgba(0,0,0,0.04);
 }
 </style>

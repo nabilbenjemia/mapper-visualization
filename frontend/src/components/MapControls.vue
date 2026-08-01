@@ -155,103 +155,97 @@ function exitCompare() {
 </script>
 
 <style>
-/* centered near the top, larger and nicer controls */
 .controls {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
   z-index: 1000;
-  margin-top: 10px;
+  margin-top: 0.625rem;
 
   display: flex;
-  gap: 10px;
+  gap: 0.625rem;
   align-items: center;
 
   background: var(--bg);
-  padding: 10px 14px;
-  border-radius: 10px;
-  box-shadow: 0 6px 18px rgba(12,18,30,0.14);
-  border: 1px solid rgba(0,0,0,0.06);
-  backdrop-filter: blur(6px);
-  font-size: 15px;
-  min-width: 360px;
+  padding: 0.625rem 0.875rem;
+  border-radius: 0.625rem;
+  box-shadow: 0 0.375rem 1.125rem rgba(12,18,30,0.14);
+  border: 0.0625rem solid rgba(0,0,0,0.06);
+  backdrop-filter: blur(0.375rem);
+  font-size: 0.9375rem;
+  min-width: 22.5rem;
 }
 
-/* wrapper so we can show a custom chevron */
 .select-wrapper {
   position: relative;
-  min-width: 130px;
+  min-width: 8.125rem;
 }
 
-/* selects */
 .select-wrapper select,
 .controls select {
   appearance: none;
   -webkit-appearance: none;
-  padding: 8px 32px;
-  padding-right: 44px; /* increased space for larger chevron */
-  border-radius: 8px;
-  border: 1px solid #dcdcdc;
+  padding: 0.5rem 2rem;
+  padding-right: 2.75rem;
+  border-radius: 0.5rem;
+  border: 0.0625rem solid #dcdcdc;
   background: var(--bg);
-  font-size: 14px;
+  font-size: 0.875rem;
   color: var(--text);
-  min-width: 130px;
+  min-width: 8.125rem;
   cursor: pointer;
-  max-height: 50px;
+  max-height: 3.125rem;
 }
 
-/* chevron indicator */
 .select-wrapper .chevron {
   position: absolute;
-  right: 12px;
+  right: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
   pointer-events: none;
   color: #333;
-  font-size: 18px; /* larger */
+  font-size: 1.125rem;
   line-height: 1;
   user-select: none;
-  opacity: 1; /* fully visible */
-  text-shadow: 0 1px 0 rgba(255,255,255,0.6);
+  opacity: 1;
+  text-shadow: 0 0.0625rem 0 rgba(255,255,255,0.6);
 }
 
-
-/* primary OK button */
 .ok-button {
-  padding: 8px 14px;
-  border-radius: 8px;
+  padding: 0.5rem 0.875rem;
+  border-radius: 0.5rem;
   border: none;
   background: #1976d2;
   color: #fff;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 6px 12px rgba(25,118,210,0.18);
+  box-shadow: 0 0.375rem 0.75rem rgba(25,118,210,0.18);
   transition: transform 0.08s ease, box-shadow 0.12s ease;
 }
 
 .ok-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(25,118,210,0.2);
+  transform: translateY(-0.125rem);
+  box-shadow: 0 0.625rem 1.25rem rgba(25,118,210,0.2);
 }
 
 .ok-button:active {
   transform: translateY(0);
-  box-shadow: 0 6px 12px rgba(25,118,210,0.16);
+  box-shadow: 0 0.375rem 0.75rem rgba(25,118,210,0.16);
 }
 
 .compare-button {
-  padding: 8px 14px;
-  border-radius: 8px;
-  border: #1976d2 solid 1px;
+  padding: 0.5rem 0.875rem;
+  border-radius: 0.5rem;
+  border: #1976d2 solid 0.0625rem;
   font-weight: 600;
   color: #1976d2;
   cursor: pointer;
-  box-shadow: 0 6px 12px rgba(85,85,85,0.18);
+  box-shadow: 0 0.375rem 0.75rem rgba(85,85,85,0.18);
   transition: transform 0.08s ease, box-shadow 0.12s ease;
 }
 
 .compare-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(85,85,85,0.2);
+  transform: translateY(-0.125rem);
+  box-shadow: 0 0.625rem 1.25rem rgba(85,85,85,0.2);
 }
 </style>

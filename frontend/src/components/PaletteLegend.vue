@@ -85,16 +85,16 @@ const otherPalettes = computed(() =>
 .palette-legend {
   display: flex;
   flex-direction: column-reverse;
-  gap: 8px;
+  gap: 0.5rem;
 
   overflow: visible;
 }
 
 .legend-container {
-  padding: 10px;
+  padding: 0.625rem;
 
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
+  border: 0.0625rem solid #e5e7eb;
+  border-radius: 0.625rem;
 
   background: var(--bg);
   cursor: pointer;
@@ -102,32 +102,31 @@ const otherPalettes = computed(() =>
 
 .gradient-bar {
   width: 100%;
-  height: 14px;
+  height: 0.875rem;
   border-radius: 999px;
 }
 
 .labels-row {
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--text);
 }
 
-/* each option */
 .palette-option {
-  width: 200px;
-  padding: 14px;
+  width: 12.5rem;
+  padding: 0.875rem;
   cursor: pointer;
 
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
+  border: 0.0625rem solid #e5e7eb;
+  border-radius: 0.625rem;
 
   background: var(--bg);
 }
 
 .palette-preview {
   width: 100%;
-  height: 14px;
+  height: 0.875rem;
   border-radius: 999px;
 }
 </style>

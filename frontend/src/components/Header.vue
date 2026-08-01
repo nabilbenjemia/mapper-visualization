@@ -32,7 +32,7 @@ defineEmits(['go-home'])
   top: 0;
   left: 0;
   width: 100%;
-  height: 64px;
+  height: 4rem;
 
   display: flex;
   justify-content: center;
@@ -42,25 +42,25 @@ defineEmits(['go-home'])
   color: var(--text);
 
   z-index: 1000;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 0.0625rem 0.25rem rgba(0,0,0,0.1);
 }
 
 .logo {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 0.375rem;
 }
 
 .logo img {
-  width: 120px;
+  width: 7.5rem;
   cursor: pointer;
 }
 
 .theme-btn {
   position: absolute;
-  right: 24px;
+  right: 1.5rem;
 
-  padding: 8px;
+  padding: 0.5rem;
   border-radius: 50%;
   background: transparent;
   border: none;

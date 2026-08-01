@@ -139,7 +139,7 @@ onBeforeUnmount(() => stopResize())
 }
 
 .compare-divider {
-  width: 6px;
+  width: 0.375rem;
   cursor: col-resize;
   background: white;
   z-index: 10;

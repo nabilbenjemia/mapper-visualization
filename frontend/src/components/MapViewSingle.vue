@@ -416,11 +416,11 @@ function addCustomLayers() {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  position: relative; 
+  position: relative;
 }
 
 .debug {
-  padding: 8px;
+  padding: 0.5rem;
 }
 
 .map-view {
@@ -431,18 +431,18 @@ function addCustomLayers() {
 
 .map-container {
   flex: 1;
-  min-height: 0; 
+  min-height: 0;
 }
 
 .overlay-stack {
   position: absolute;
-  width: 200px;
-  left: 20px;
-  bottom: 20px;
+  width: 12.5rem;
+  left: 1.25rem;
+  bottom: 1.25rem;
 
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0.5rem;
   align-items: flex-start;
 }
 
@@ -458,16 +458,16 @@ function addCustomLayers() {
 .palette-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0.5rem;
 }
 
 .hover-tooltip {
   position: absolute;
   background: #000000CC;
   color: white;
-  padding: 6px 8px;
-  border-radius: 6px;
-  font-size: 12px;
+  padding: 0.375rem 0.5rem;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
   pointer-events: none;
   white-space: nowrap;
   transform: translate(0, 0);
@@ -479,10 +479,7 @@ function addCustomLayers() {
   color: var(--text);
 }
 
-.maplibregl-ctrl-attrib a{
+.maplibregl-ctrl-attrib a {
   color: var(--text);
 }
-
-
 </style>
-

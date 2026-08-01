@@ -53,27 +53,27 @@ const props = defineProps({
 
 <style>
 .dataset-metadata {
-    padding: 12px 16px;
+    padding: 0.75rem 1rem;
 
     background: var(--bg);
     color: var(--text);
 
-    border: 1px solid #e5e7eb;
-    border-radius: 10px;
+    border: 0.0625rem solid #e5e7eb;
+    border-radius: 0.625rem;
 
-    box-shadow: 0 2px 8px rgb(0 0 0 / 12%);
+    box-shadow: 0 0.125rem 0.5rem rgb(0 0 0 / 12%);
 }
 
 .dataset-metadata h2 {
-    margin: 0 0 12px;
-    font-size: 16px;
+    margin: 0 0 0.75rem;
+    font-size: 1rem;
     font-weight: 600;
     text-align: center;
 }
 
 .dataset-metadata p {
-    margin: 4px 0;
-    font-size: 14px;
+    margin: 0.25rem 0;
+    font-size: 0.875rem;
     line-height: 1.4;
 }
 
@@ -82,18 +82,18 @@ const props = defineProps({
 }
 
 .section {
-    margin-top: 10px;
+    margin-top: 0.625rem;
 }
 
 .kernel-list {
-    margin-left: 8px;
+    margin-left: 0.5rem;
 }
 
 .metadata-row {
     display: flex;
     justify-content: space-between;
-    gap: 16px;
-    margin: 6px 0;
+    gap: 1rem;
+    margin: 0.375rem 0;
 }
 
 .label {
