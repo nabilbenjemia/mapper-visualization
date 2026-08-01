@@ -16,9 +16,13 @@ from core.builder.tile_builder import build_pmtiles
 from pydantic import BaseModel
 from scripts.aggregate_h3 import create_resolution_parquets
 from core.builder.frontend_metadata import export_frontend_metadata
+from pathlib import Path
+from core.admin.dataset_service import (
+    list_datasets,
+    build_dataset_tiles,
+    build_single_tile,
+)
 
-#FILE_PATH = "/mnt/data/h3_geojson/hamburg_fuel_station_drive.geojson" 
-FILE_PATH = "/mnt/data/h3_geojson/full.geojson"
 BASE_DIR = "/mnt/data/h3_geojson/hamburg"
 
 app = FastAPI()
@@ -32,237 +36,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-geojson_data = None
-
-'''
-def convert_to_geojson(df, limit=5):
-    features = []
-    df = df[["h3", "poi_ambulance_station_walk"]].head(limit) 
-    
-    print("Input data:")
-    print(df)
-
-    for _, row in df.iterrows():
-        h3_index = row["h3"]
-        #value = row["value"]
-
-        # get hexagon boundary
-        boundary = h3.cell_to_boundary(h3_index) # returns list of (lat, lng) tuples !!!!!!! 
-        
-        # flip (lat, lng) -> (lng, lat)
-        boundary = [(lng, lat) for lat, lng in boundary]
-
-        lat, lng = h3.cell_to_latlng(h3_index) # get center point (lat, lng)
-        
-        polygon = Polygon(boundary)
-        
-        properties = row.drop("h3").to_dict() #take all columns except "h3" as properties
-        properties["lat"] = lat
-        properties["lng"] = lng
-
-        features.append({
-            "type": "Feature",
-            "geometry": mapping(polygon),
-            "properties": properties
-        })
-
-    return {
-        "features": features
-    }
-'''
-
-def convert_to_geojson(df, limit=5, columns=None, keep_h3=True, mode="drive"):
-    features = []
-
-    # filter columns by mode suffix
-    if columns:
-        selected_cols = columns
-    else:
-        selected_cols = [col for col in df.columns if col.endswith(f"_{mode}")]
-
-    df = df[["h3"] + selected_cols]
-
-    #print("Selected columns:", selected_cols)
-    #print(df.head())
-
-    for _, row in df.iterrows():
-        h3_index = row["h3"]
-
-        # boundary (lat, lng) → (lng, lat)
-        boundary = h3.cell_to_boundary(h3_index)
-        boundary = [(lng, lat) for lat, lng in boundary]
-
-        polygon = Polygon(boundary)
-
-        # centroid
-        lat, lng = h3.cell_to_latlng(h3_index)
-
-        # properties
-        properties = row.drop("h3").to_dict()
-
-        if keep_h3:
-            properties["h3"] = h3_index
-
-        properties["center"] = {"lng": lng, "lat": lat}
-
-        features.append({
-            "type": "Feature",
-            "geometry": mapping(polygon),
-            "properties": properties
-        })
-
-    return {
-        "type": "FeatureCollection",
-        "features": features
-    }
-
-
-GEOJSON_CACHE = {}
-
-def load_geojson_dir():
-    for file in os.listdir(BASE_DIR):
-        if file.endswith(".geojson"):
-            mode = file.replace(".geojson", "")
-            path = os.path.join(BASE_DIR, file)
-
-            print(f"Loading {mode} → {path}")
-
-            with open(path) as f:
-                GEOJSON_CACHE[mode] = json.load(f)
-                
-@app.on_event("startup")
-def load_data():
-    global geojson_data    
-    print("Ready!")
-
-@app.get("/geojson/{mode}")
-def get_geojson(mode: str):
-    data = GEOJSON_CACHE.get(mode)
-
-    if not data:
-        return {"error": "mode not found"}
-
-    return data
-
-@app.get("/health")
-def health():
-    return {"status": "ok", "message": "Backend is healthy!"}
-
-@app.get("/layers/{category}/{mode}")
-def get_layer(category: Category, mode: Mode):
-    layer = layer_name(category.value, mode.value)
-    return {"layer": layer}
-
-@app.get("/test-layer/{category}/{mode}")
-def test_layer(category: str, mode: str):
-    result = load_layer("/mnt/data/results/2026-02-19T14-11-24Z_germany-hamburg_ee98d3/cells.parquet", category, mode)
-
-    # fetch only a few rows for testing
-    rows = result.fetchmany(5)
-
-    return {
-        "columns": [desc[0] for desc in result.description],
-        "rows": rows
-    }
-    
-@app.get("/test-geo/{h3_index}")
-def test_geo(h3_index: str):
-    polygon, center = h3_to_geometry(h3_index)
-
-    return {
-        "h3_index": h3_index,
-        "polygon": polygon,
-        "center": {"lng": center[0], "lat": center[1]}
-    }
-    
-@app.post("/build-tiles/{city}/{dataset}")
-def build_all_tiles(city: str, dataset: str):
-    
-    parquet_path_base = f"/mnt/data/results/{dataset}/"
-    
-    if not os.path.isdir(parquet_path_base):
-        return {
-            "status": "error",
-            "message": f"Dataset '{dataset}' not found."
-        }
-        
-    create_resolution_parquets(dataset)
-    
-    export_frontend_metadata(parquet_path_base + "run_manifest.json", f"/mnt/data/tiles/{city}/{dataset}")
-    
-    errors = []
-    
-    for category in Category:
-        for mode in Mode:
-            output_path = f"/mnt/data/tiles/{city}/{dataset}/{city}_{category.value}_{mode.value}.pmtiles"
-            if not os.path.exists(output_path):
-                try:
-                    build_pmtiles(
-                        {
-                            6: parquet_path_base + "cells_res6.parquet", 
-                            8: parquet_path_base + "cells_res8.parquet", 
-                            10: parquet_path_base + "cells_res10.parquet"
-                        },
-                        output_path,
-                        category.value,
-                        mode.value
-                    )
-
-                except RuntimeError as e:
-
-                    errors.append({
-                        "category": category.value,
-                        "mode": mode.value,
-                        "error": str(e)
-                    })
-
-    if errors:
-        return {
-            "status": "partial_failure",
-            "errors": errors
-        }
-
-    return {
-        "status": "ok",
-        "message": f"All tiles generated for {city}"
-    }
-    
-@app.post("/build-tiles/{city}/{dataset}/{category}/{mode}")
-def build_tiles(city: str, dataset: str, category: str, mode: str, background_tasks: BackgroundTasks):
-    parquet_path_base = f"/mnt/data/results/{dataset}/"
-    
-    if not os.path.isdir(parquet_path_base):
-        return {
-            "status": "error",
-            "message": f"Dataset '{dataset}' not found."
-        }
-    
-    output_path = f"/mnt/data/tiles/{city}/{dataset}/{city}_{category}_{mode}.pmtiles"
-
-    create_resolution_parquets(dataset)
-    
-    export_frontend_metadata(parquet_path_base + "run_manifest.json", f"/mnt/data/tiles/{city}/{dataset}")
-    
-    try:
-        build_pmtiles(
-            {
-                6: parquet_path_base + "cells_res6.parquet", 
-                8: parquet_path_base + "cells_res8.parquet", 
-                10: parquet_path_base + "cells_res10.parquet"
-            },
-            output_path,
-            category,
-            mode
-        )
-
-    except RuntimeError as e:
-        return {"status": "error", "message": str(e)}
-    
-
-  
-    
 app.mount(
     "/tiles",
     StaticFiles(directory="/mnt/data/tiles"),
     name="tiles"
 )
+      
+@app.on_event("startup")
+def load_data():
+    print("Ready!")
+
+@app.get("/health")
+def health():
+    return {"status": "ok", "message": "Backend is healthy!"}
+    
+@app.get("/admin/datasets")
+def get_datasets():
+    return list_datasets()
+
+@app.post("/admin/datasets/{dataset}/build")
+def build_all_tiles(dataset: str, background_tasks: BackgroundTasks):
+    return build_dataset_tiles(dataset, background_tasks)
+    
+@app.post("/admin/datasets/{dataset}/build/{category}/{mode}")
+def build_tiles(dataset: str, category: str, mode: str, background_tasks: BackgroundTasks):
+    return build_single_tile(dataset, category, mode, background_tasks)
