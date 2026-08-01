@@ -6,7 +6,7 @@
             <div v-if="metadata.kernel">
                 <div class="metadata-row">
                     <span class="label">Kernel</span>
-                    <span class="value">{{ metadata.kernel.type }}</span>
+                    <span class="value">{{ metadata.kernel.type.charAt(0).toUpperCase() + metadata.kernel.type.slice(1) }}</span>
                 </div>
 
                 <div v-if="metadata.kernel.sigma" class="metadata-row">
