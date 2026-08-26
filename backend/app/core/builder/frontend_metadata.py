@@ -7,6 +7,7 @@ def export_frontend_metadata(manifest_path: str, output_dir: str):
     if os.path.exists(output_path):
         return
     
+    os.makedirs(output_dir, exist_ok=True) 
     with open(manifest_path, "r") as f:
         manifest = json.load(f)
 

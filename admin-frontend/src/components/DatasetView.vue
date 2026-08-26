@@ -8,6 +8,7 @@
         :key="dataset.dataset"
         :dataset="dataset"
         @build="buildDataset"
+        @build-mode="buildTiles"
       />
     </div>
   </div>
@@ -30,6 +31,7 @@ async function loadDatasets() {
     }
 
     datasets.value = await response.json()
+    console.log("Loaded datasets:", datasets.value)
   } catch (error) {
     console.error("Could not load datasets:", error)
   }
@@ -54,6 +56,33 @@ async function buildDataset(dataset) {
   }
 }
 
+async function buildTiles({ dataset, category, mode }) {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/admin/datasets/${dataset}/build/${category}/${mode}`,
+      {
+        method: "POST",
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed building tiles (${response.status})`
+      )
+    }
+
+    console.log(
+      `Started building ${dataset}/${category}/${mode}`
+    )
+
+    await loadDatasets()
+  } catch (error) {
+    console.error(
+      `Could not build tiles for ${dataset}/${category}/${mode}:`,
+      error
+    )
+  }
+}
 onMounted(loadDatasets)
 </script>
 

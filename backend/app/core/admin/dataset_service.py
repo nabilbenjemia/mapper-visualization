@@ -194,7 +194,7 @@ def prepare_dataset(dataset: str, region: str):
         TILES_DIR / region / dataset
     )
     
-def get_pmtiles_status(dataset_path: Path, dataset: str):
+def get_dataset_status(dataset_path: Path, dataset: str):
 
     manifest_path = dataset_path / "run_manifest.json"
 
@@ -205,7 +205,8 @@ def get_pmtiles_status(dataset_path: Path, dataset: str):
                 "available": 0,
                 "expected": 0,
                 "status": "missing_manifest"
-            }
+            },
+            "categories": []
         }
 
     with open(manifest_path) as f:
@@ -213,46 +214,52 @@ def get_pmtiles_status(dataset_path: Path, dataset: str):
 
     region = manifest.get("meta", {}).get("region", "").split("/")[-1]
 
-    categories = (
-        manifest
-        .get("meta", {})
-        .get("amenities", [])
-    )
+    categories = manifest.get("meta", {}).get("amenities", [])
+    modes = manifest.get("meta", {}).get("modes", [])
 
-    modes = (
-        manifest
-        .get("meta", {})
-        .get("modes", [])
-    )
+    tiles_path = TILES_DIR / region / dataset
 
-
-    expected = len(categories) * len(modes)
-
-
-    tiles_path = (
-        TILES_DIR
-        / region
-        / dataset
-    )
-
-
-    available = 0
+    available_tiles = set()
 
     if tiles_path.exists():
-        available = len(
-            list(tiles_path.glob("*.pmtiles"))
-        )
+        available_tiles = {
+            path.name
+            for path in tiles_path.glob("*.pmtiles")
+        }
 
+    category_status = []
+
+    for category in categories:
+
+        mode_status = []
+
+        for mode in modes:
+
+            filename = f"{region}_{category}_{mode}.pmtiles"
+
+            mode_status.append({
+                "mode": mode,
+                "available": filename in available_tiles
+            })
+
+        category_status.append({
+            "category": category,
+            "modes": mode_status
+        })
+
+    expected = len(categories) * len(modes)
+    available = sum(
+        combination["available"]
+        for category in category_status
+        for combination in category["modes"]
+    )
 
     if available == 0:
         status = "none"
-
     elif available < expected:
         status = "partial"
-
     else:
         status = "complete"
-
 
     return {
         "region": region,
@@ -260,7 +267,8 @@ def get_pmtiles_status(dataset_path: Path, dataset: str):
             "available": available,
             "expected": expected,
             "status": status
-        }
+        },
+        "categories": category_status
     }
     
     
@@ -283,7 +291,7 @@ def list_datasets():
             continue
 
 
-        info = get_pmtiles_status(
+        info = get_dataset_status(
             dataset_path,
             dataset
         )

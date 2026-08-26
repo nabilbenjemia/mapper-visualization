@@ -24,7 +24,14 @@
         <strong>Source:</strong>
         {{ dataset.source_available ? "Available" : "Missing" }}
       </p>
+
+      <CategoryModes
+        :dataset="dataset"
+        @build-mode="buildMode"
+      />
     </div>
+
+    
 
     <div class="actions">
       <button
@@ -46,6 +53,7 @@
 
 <script setup>
 import { ref } from "vue"
+import CategoryModes from "./CategoryModes.vue"
 
 defineProps({
   dataset: {
@@ -54,9 +62,16 @@ defineProps({
   },
 })
 
-defineEmits(["build"])
+const emit = defineEmits([
+  "build",
+  "build-mode",
+])
 
 const showDetails = ref(false)
+
+function buildMode(data) {
+  emit("build-mode", data)
+}
 </script>
 
 <style scoped>
