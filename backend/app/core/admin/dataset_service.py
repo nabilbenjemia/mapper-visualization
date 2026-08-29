@@ -6,6 +6,8 @@ from config.modes import Mode
 from core.builder.tile_builder import build_pmtiles
 from core.builder.frontend_metadata import export_frontend_metadata
 from scripts.aggregate_h3 import create_resolution_parquets
+from core.jobs.job_manager import create_job, update_job
+from config.job_status import JobStatus
 
 
 RESULTS_DIR = Path("/mnt/data/results")
@@ -35,18 +37,25 @@ def build_single_tile(dataset: str, category: str, mode: str, background_tasks):
 
     region = manifest.get("meta", {}).get("region", "").split("/")[-1]
 
+    job_id = create_job(
+        dataset=dataset,
+        category=category,
+        mode=mode
+    )
 
     background_tasks.add_task(
         generate_single_tile,
         dataset,
         region,
         category,
-        mode
+        mode,
+        job_id
     )
 
 
     return {
-        "status": "queued",
+        "job_id": job_id,
+        "status": JobStatus.PROCESSING,
         "dataset": dataset,
         "region": region,
         "category": category,
@@ -86,19 +95,25 @@ def build_dataset_tiles(dataset: str, background_tasks):
                 "message": f"Region name could not be determined."
             }
 
+        job_id = create_job(
+            dataset=dataset
+        )
 
         background_tasks.add_task(
             generate_all_tiles,
             dataset,
             region,
             categories,
-            modes
+            modes,
+            job_id
         )
 
 
         return {
-            "status": "queued",
-            "dataset": dataset
+            "job_id": job_id,
+            "status": JobStatus.PROCESSING,
+            "dataset": dataset,
+            "region": region
         }
 
 
@@ -109,79 +124,89 @@ def build_dataset_tiles(dataset: str, background_tasks):
         }
 
 
-def generate_single_tile(dataset: str, region: str, category: str, mode: str):
+def generate_single_tile(dataset: str, region: str, category: str, mode: str, job_id: str):
 
-    #Add job updates and try/except for error handling and logging
-    dataset_path = RESULTS_DIR / dataset
+    try: 
+        dataset_path = RESULTS_DIR / dataset
 
-    prepare_dataset(dataset, region)
+        prepare_dataset(dataset, region)
 
-    output_path = (
-        TILES_DIR
-        / region
-        / dataset
-        / f"{region}_{category}_{mode}.pmtiles"
-    )
+        output_path = (
+            TILES_DIR
+            / region
+            / dataset
+            / f"{region}_{category}_{mode}.pmtiles"
+        )
 
 
-    build_pmtiles(
-        {
-            6: dataset_path / "cells_res6.parquet",
-            8: dataset_path / "cells_res8.parquet",
-            10: dataset_path / "cells_res10.parquet"
-        },
-        output_path,
-        category,
-        mode
-    )
+        build_pmtiles(
+            {
+                6: dataset_path / "cells_res6.parquet",
+                8: dataset_path / "cells_res8.parquet",
+                10: dataset_path / "cells_res10.parquet"
+            },
+            output_path,
+            category,
+            mode
+        )
+        
+        update_job(job_id, status=JobStatus.SUCCESS)
+        
+    except Exception as e:
+        update_job(job_id, status=JobStatus.ERROR, error=str(e))
     
     
-def generate_all_tiles(dataset: str, region: str, categories: list, modes: list):
+def generate_all_tiles(dataset: str, region: str, categories: list, modes: list, job_id: str):
 
-    dataset_path = RESULTS_DIR / dataset
+    try: 
+        dataset_path = RESULTS_DIR / dataset
 
-    prepare_dataset(dataset, region)
-    
-    manifest_path = dataset_path / "run_manifest.json"
+        prepare_dataset(dataset, region)
+        
+        manifest_path = dataset_path / "run_manifest.json"
 
-    if not manifest_path.exists():
-        return {
-            "region": None,
-            "pmtiles": {
-                "available": 0,
-                "expected": 0,
-                "status": "missing_manifest"
+        if not manifest_path.exists():
+            return {
+                "region": None,
+                "pmtiles": {
+                    "available": 0,
+                    "expected": 0,
+                    "status": "missing_manifest"
+                }
             }
-        }
 
-    with open(manifest_path) as f:
-        manifest = json.load(f)
+        with open(manifest_path) as f:
+            manifest = json.load(f)
 
-    region = manifest.get("meta", {}).get("region", "").split("/")[-1]
+        region = manifest.get("meta", {}).get("region", "").split("/")[-1]
 
-    for category in categories:
-        for mode in modes:
+        for category in categories:
+            for mode in modes:
 
-            output_path = (
-                TILES_DIR
-                / region
-                / dataset
-                / f"{region}_{category}_{mode}.pmtiles"
-            )
+                output_path = (
+                    TILES_DIR
+                    / region
+                    / dataset
+                    / f"{region}_{category}_{mode}.pmtiles"
+                )
 
-            if output_path.exists():
-                continue
+                if output_path.exists():
+                    continue
 
-            build_pmtiles(
-                {
-                    6: dataset_path / "cells_res6.parquet",
-                    8: dataset_path / "cells_res8.parquet",
-                    10: dataset_path / "cells_res10.parquet"
-                },
-                output_path,
-                category,
-                mode
-            )
+                build_pmtiles(
+                    {
+                        6: dataset_path / "cells_res6.parquet",
+                        8: dataset_path / "cells_res8.parquet",
+                        10: dataset_path / "cells_res10.parquet"
+                    },
+                    output_path,
+                    category,
+                    mode
+                )
+        update_job(job_id, status=JobStatus.SUCCESS)
+        
+    except Exception as e:
+        update_job(job_id, status=JobStatus.ERROR, error=str(e))
             
 
 def prepare_dataset(dataset: str, region: str):

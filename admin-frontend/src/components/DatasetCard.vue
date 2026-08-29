@@ -27,6 +27,7 @@
 
       <CategoryModes
         :dataset="dataset"
+        :build-statuses="buildStatuses"
         @build-mode="buildMode"
       />
     </div>
@@ -43,23 +44,35 @@
 
       <button
         class="build-button"
+        :disabled="isBuilding"
         @click="$emit('build', dataset)"
       >
-        Build Tiles
+        {{ isBuilding ? "Processing..." : "Build Tiles" }}
       </button>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from "vue"
+import { computed, ref } from "vue"
 import CategoryModes from "./CategoryModes.vue"
 
-defineProps({
+const props = defineProps({
   dataset: {
     type: Object,
     required: true,
   },
+  buildStatuses: {
+    type: Object,
+    default: () => ({}),
+  },
+})
+
+const isBuilding = computed(() => {
+  return (
+    props.buildStatuses[`dataset:${props.dataset.dataset}`] ===
+    "PROCESSING"
+  )
 })
 
 const emit = defineEmits([
@@ -140,5 +153,10 @@ button {
 
 .details-button:hover {
   background: #f3f4f6;
+}
+
+.build-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 </style>

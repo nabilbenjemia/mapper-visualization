@@ -42,25 +42,48 @@
           </span>
 
           <div class="mode-actions">
-            <span
-              class="status"
+            <span class="status"
               :class="{
-                available: mode.available,
-                unavailable: !mode.available
+                available:
+                  mode.available &&
+                  !getBuildStatus(selectedCategory, mode.mode),
+
+                processing:
+                  getBuildStatus(selectedCategory, mode.mode) ===
+                  'PROCESSING',
+
+                error:
+                  getBuildStatus(selectedCategory, mode.mode) ===
+                  'ERROR',
+
+                unavailable:
+                  !mode.available &&
+                  !getBuildStatus(selectedCategory, mode.mode)
               }"
             >
               <span class="status-dot"></span>
 
               {{
-                mode.available
-                  ? "Available"
-                  : "Not available"
+                getBuildStatus(selectedCategory, mode.mode) ===
+                "PROCESSING"
+                  ? "Processing..."
+                  : getBuildStatus(selectedCategory, mode.mode) ===
+                    "ERROR"
+                    ? "Error"
+                    : mode.available
+                      ? "Available"
+                      : "Not available"
               }}
             </span>
 
             <button
-              v-if="!mode.available"
+              v-if="
+                !mode.available &&
+                getBuildStatus(selectedCategory, mode.mode) !==
+                  'PROCESSING'
+              "
               class="mode-build-button"
+              :disabled="isDatasetBuilding"
               @click="buildMode(mode.mode)"
             >
               Build
@@ -80,7 +103,17 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  buildStatuses: {
+    type: Object,
+    default: () => ({}),
+  },
 })
+
+function getBuildStatus(category, mode) {
+  return props.buildStatuses[
+    `${props.dataset.dataset}:${category}:${mode}`
+  ]
+}
 
 const emit = defineEmits(["build-mode"])
 
@@ -108,6 +141,14 @@ function formatName(value) {
     .replace(/_/g, " ")
     .replace(/\b\w/g, char => char.toUpperCase())
 }
+
+const isDatasetBuilding = computed(() => {
+  return (
+    props.buildStatuses[`dataset:${props.dataset.dataset}`] ===
+    "PROCESSING"
+  )
+})
+
 </script>
 
 <style scoped>
@@ -239,5 +280,33 @@ function formatName(value) {
 
 .mode-build-button:hover {
   background: #eff6ff;
+}
+
+.status.processing {
+  color: #2563eb;
+}
+
+.status.error {
+  color: #dc2626;
+}
+
+.status.error .status-dot {
+  background: #dc2626;
+}
+
+.status.processing .status-dot {
+  background: #2563eb;
+  animation: pulse 1.2s infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.35;
+  }
 }
 </style>
