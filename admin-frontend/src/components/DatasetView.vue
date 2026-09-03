@@ -16,14 +16,15 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from "vue"
+import { onMounted, onUnmounted, ref } from "vue"
 import DatasetCard from "./DatasetCard.vue"
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
 const datasets = ref([])
-
 const buildStatuses = ref({})
+
+let jobsPollingInterval = null
 
 function getBuildKey(dataset, category, mode) {
   return `${dataset}:${category}:${mode}`
@@ -35,23 +36,102 @@ function getDatasetBuildKey(dataset) {
 
 async function loadDatasets() {
   try {
-    const response = await fetch(`${API_BASE_URL}/admin/datasets`)
+    const response = await fetch(
+      `${API_BASE_URL}/admin/datasets`
+    )
 
     if (!response.ok) {
-      throw new Error(`Failed loading datasets (${response.status})`)
+      throw new Error(
+        `Failed loading datasets (${response.status})`
+      )
     }
 
     datasets.value = await response.json()
+
     console.log("Loaded datasets:", datasets.value)
+
   } catch (error) {
-    console.error("Could not load datasets:", error)
+    console.error(
+      "Could not load datasets:",
+      error
+    )
   }
 }
 
-async function buildDataset(dataset) {
-  const key = getDatasetBuildKey(dataset.dataset)
+async function loadJobs() {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/admin/jobs`
+    )
 
-  buildStatuses.value[key] = "PROCESSING"
+    if (!response.ok) {
+      throw new Error(
+        `Failed loading jobs (${response.status})`
+      )
+    }
+
+    const jobs = await response.json()
+
+    const statuses = {}
+
+    for (const job of jobs) {
+
+      // Child job: category × mode
+      if (job.category && job.mode) {
+
+        const key = getBuildKey(
+          job.dataset,
+          job.category,
+          job.mode
+        )
+
+        statuses[key] = job.status
+
+      }
+
+      // Parent job: Build All
+      else {
+
+        const key = getDatasetBuildKey(
+          job.dataset
+        )
+
+        statuses[key] = job.status
+      }
+    }
+
+    buildStatuses.value = statuses
+
+  } catch (error) {
+    console.error(
+      "Could not load jobs:",
+      error
+    )
+  }
+}
+
+
+function startJobsPolling() {
+
+  loadJobs()
+
+  // Load jobs every 3 seconds
+  jobsPollingInterval = setInterval(() => {
+    loadJobs()
+  }, 3000)
+}
+
+
+function stopJobsPolling() {
+
+  if (jobsPollingInterval) {
+    clearInterval(jobsPollingInterval)
+    jobsPollingInterval = null
+  }
+}
+
+
+async function buildDataset(dataset) {
 
   try {
     const response = await fetch(
@@ -74,29 +154,19 @@ async function buildDataset(dataset) {
       job.job_id
     )
 
-    pollJob(job.job_id, key)
+    // Immediately refresh job state
+    await loadJobs()
 
   } catch (error) {
+
     console.error(
       `Could not build dataset ${dataset.dataset}:`,
       error
     )
-
-    buildStatuses.value[key] = "ERROR"
   }
 }
 
 async function buildTiles({ dataset, category, mode }) {
-  const key = getBuildKey(dataset, category, mode)
-
-  buildStatuses.value[key] = "PROCESSING"
-  
-  console.log(
-    "BUILD STATUS SET:",
-    key,
-    buildStatuses.value
-  )
-
 
   try {
     const response = await fetch(
@@ -119,73 +189,29 @@ async function buildTiles({ dataset, category, mode }) {
       job.job_id
     )
 
-    pollJob(job.job_id, key)
+    await loadJobs()
 
   } catch (error) {
+
     console.error(
       `Could not build tiles for ${dataset}/${category}/${mode}:`,
       error
     )
-
-    buildStatuses.value[key] = "ERROR"
   }
 }
 
-async function pollJob(jobId, key) {
-  try {
-    const response = await fetch(
-      `${API_BASE_URL}/admin/jobs/${jobId}`
-    )
+onMounted(async () => {
 
-    if (!response.ok) {
-      throw new Error(
-        `Failed to get job status (${response.status})`
-      )
-    }
+  await loadDatasets()
 
-    const job = await response.json()
+  await loadJobs()
 
-    buildStatuses.value[key] = job.status
+  startJobsPolling()
+})
 
-    if (job.status === "PROCESSING") {
-      setTimeout(() => {
-        pollJob(jobId, key)
-      }, 1000)
-
-      return
-    }
-
-    if (job.status === "SUCCESS") {
-      console.log(`Build completed: ${jobId}`)
-
-      delete buildStatuses.value[key]
-
-      await loadDatasets()
-
-      return
-    }
-
-    if (job.status === "ERROR") {
-      console.error(
-        `Build failed: ${job.error}`
-      )
-
-      return
-    }
-
-  } catch (error) {
-    console.error(
-      `Could not retrieve job status for ${jobId}:`,
-      error
-    )
-
-    setTimeout(() => {
-      pollJob(jobId, key)
-    }, 1000)
-  }
-}
-
-onMounted(loadDatasets)
+onUnmounted(() => {
+  stopJobsPolling()
+})
 </script>
 
 <style scoped>
