@@ -7,18 +7,26 @@ from core.pipeline.parquet_loader import load_layer
 from core.pipeline.features import build_feature
 from utils.logger import get_logger
 
-logger = get_logger(__name__)
 
-def build_pmtiles(parquet_paths: dict, output_path: str, category: str, mode: str):
+def build_pmtiles(dataset: str, parquet_paths: dict, output_path: str, category: str, mode: str):
+    logger = get_logger(__name__, dataset)
+    logger.info(f"Starting PMTiles build for dataset={dataset}, category={category}, mode={mode}")
+    
     start_time = time.time()
     csv_result_path = os.path.dirname(output_path) + "/results.csv"
     logger.info(f"Building PMTiles for category={category}, mode={mode}")
 
-    zoom_config = {
-        6:  {"min_zoom": 0,  "max_zoom": 6},
-        8:  {"min_zoom": 7,  "max_zoom": 9},
-        10: {"min_zoom": 10, "max_zoom": 14},
-    }
+    if not parquet_paths:
+        raise RuntimeError("No parquet files provided")
+    
+    resolutions = sorted(parquet_paths.keys())
+    
+    if len(resolutions) != 3:
+        raise RuntimeError(
+            f"Expected 3 resolutions, got {len(resolutions)}: {resolutions}"
+        )
+    
+    logger.info(f"Generated resolutions: {resolutions}")
 
     tmp_files = []
     mbtiles_files = []
@@ -30,12 +38,24 @@ def build_pmtiles(parquet_paths: dict, output_path: str, category: str, mode: st
     
     try:
 
-        for res, parquet_path in parquet_paths.items():
+        for index, res in enumerate(resolutions):
+            parquet_path = parquet_paths[res]
+            
             logger.info(f"Processing resolution {res} with parquet {parquet_path}")
-            rows = load_layer(parquet_path, category, mode)
+            rows = load_layer(dataset, parquet_path)
 
-            tmp_file = f"/mnt/data/tmp/{category}_{mode}_res{res}.geojsonl"
-            tmp_mbtiles = f"/mnt/data/tmp/{category}_{mode}_res{res}.mbtiles"
+            tmp_dir = "/mnt/data/tmp"
+            os.makedirs(tmp_dir, exist_ok=True)
+
+            tmp_file = os.path.join(
+                tmp_dir,
+                f"{category}_{mode}_res{res}.geojsonl"
+            )
+
+            tmp_mbtiles = os.path.join(
+                tmp_dir,
+                f"{category}_{mode}_res{res}.mbtiles"
+            )
             
             tmp_files.append(tmp_file)
 
@@ -45,7 +65,7 @@ def build_pmtiles(parquet_paths: dict, output_path: str, category: str, mode: st
             with open(tmp_file, "w") as f:                          
                 for h3_index, value in rows:
                     try:
-                        feature = build_feature(h3_index, value)
+                        feature = build_feature(dataset, h3_index, value)
                     except Exception as e:
                         invalid += 1
                         logger.error(f"Feature build failed: {e}")
@@ -67,10 +87,32 @@ def build_pmtiles(parquet_paths: dict, output_path: str, category: str, mode: st
                 logger.warning(f"No features for res {res}, skipping")
                 continue
 
-            zmin = zoom_config[res]["min_zoom"]
-            zmax = zoom_config[res]["max_zoom"]
+            # Assign zoom ranges based on resolution order
+            if index == 0:
+                # Lowest resolution → low zooms
+                zmin = 0
+                zmax = 6
 
-            extra_flags = ["--drop-densest-as-needed"] if res == 10 else []
+            elif index == 1:
+                # Middle resolution → medium zooms
+                zmin = 7
+                zmax = 9
+
+            else:
+                # Highest resolution → high zooms
+                zmin = 10
+                zmax = 14
+
+            # Only apply densest dropping to the highest resolution
+            extra_flags = (
+                ["--drop-densest-as-needed"]
+                if index == len(resolutions) - 1
+                else []
+            )
+
+            logger.info(
+                f"Resolution {res} → zoom {zmin}-{zmax}"
+            )
 
             logger.info(f"Running tippecanoe for res {res}...")
 

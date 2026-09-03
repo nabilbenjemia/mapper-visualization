@@ -1,28 +1,12 @@
-import pandas as pd
-import h3
-import json
-import os
-import time
-from shapely.geometry import Polygon, mapping
 from fastapi import FastAPI, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from config.layers import layer_name
-from config.categories import Category
-from config.modes import Mode
-from core.pipeline.parquet_loader import load_layer
-from core.pipeline.h3_to_geo import h3_to_geometry
-from core.builder.tile_builder import build_pmtiles
-from pydantic import BaseModel
-from scripts.aggregate_h3 import create_resolution_parquets
-from core.builder.frontend_metadata import export_frontend_metadata
-from pathlib import Path
 from core.admin.dataset_service import (
     list_datasets,
-    build_dataset_tiles,
-    build_single_tile,
+    build_all_tiles as service_build_all_tiles,
+    build_single_tile as service_build_single_tile,
 )
-from core.jobs.job_manager import create_job, get_job
+from core.jobs.job_manager import create_job, get_job, list_jobs
 from fastapi import HTTPException
 
 app = FastAPI()
@@ -56,11 +40,11 @@ def get_datasets():
 
 @app.post("/admin/datasets/{dataset}/build")
 def build_all_tiles(dataset: str, background_tasks: BackgroundTasks):
-    return build_dataset_tiles(dataset, background_tasks)
+    return service_build_all_tiles(dataset, background_tasks)
     
 @app.post("/admin/datasets/{dataset}/build/{category}/{mode}")
 def build_tiles(dataset: str, category: str, mode: str, background_tasks: BackgroundTasks):
-    return build_single_tile(dataset, category, mode, background_tasks)
+    return service_build_single_tile(dataset, category, mode, background_tasks)
 
 @app.get("/admin/jobs/{job_id}")
 def get_job_status(job_id: str):
@@ -73,3 +57,7 @@ def get_job_status(job_id: str):
         )
 
     return job
+
+@app.get("/admin/jobs")
+def get_all_jobs():
+    return list_jobs()
