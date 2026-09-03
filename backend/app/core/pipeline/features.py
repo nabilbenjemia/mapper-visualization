@@ -2,9 +2,9 @@ from core.pipeline.h3_to_geo import h3_to_geometry
 from utils.logger import get_logger
 import math
 
-logger = get_logger(__name__)
+def build_feature(dataset: str, h3_index: str, value: float, round_value: int = 2):
+    logger = get_logger(__name__, dataset)
 
-def build_feature(h3_index: str, value: float, round_value: int = 2):
     polygon, center = h3_to_geometry(h3_index)
 
     # sanitize value
