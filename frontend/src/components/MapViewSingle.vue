@@ -40,12 +40,13 @@
 import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue'
 import MapControls from './MapControls.vue'
 import maplibregl from 'maplibre-gl';
+import { PMTiles } from 'pmtiles';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { palettes } from '../config/palettes.js';
 import PaletteLegend from './PaletteLegend.vue';
 import { categories } from '../config/categories.js'
 import { modes } from '../config/modes.js'
-import { sources } from '../config/sources.js'
+import { sources, regionCountries } from '../config/sources.js'
 import { useThemeStore } from '../stores/theme.js';
 import DatasetMetadata from './DatasetInfo.vue'
 
@@ -177,26 +178,27 @@ function handleExitCompareClick(payload) {
   emit('exit-compare', payload)
 }
 
+// Background highlight follows the selected source's region
+const countryFillColor = computed(() => {
+  const countries = regionCountries[selectedSourceInfo.value?.region] ?? []
+  const color = palettes[selectedPalette.value]?.colors[0]
+
+  if (!countries.length || !color) return "#00000000"
+
+  return ["match", ["get", "name"], countries, color, "#00000000"]
+})
+
+function updateCountryFill() {
+  if (!map.value?.getLayer("countries-fill")) return
+
+  map.value.setPaintProperty("countries-fill", "fill-color", countryFillColor.value)
+  map.value.setPaintProperty("countries-fill", "fill-opacity", 1)
+}
+
 watch(selectedPalette, (newPalette) => {
   if (!map.value || !map.value.getLayer(LAYER_ID)) return
-  
-  map.value.setPaintProperty(
-    "countries-fill",
-    "fill-color",
-    [
-      "case",
-      ["==", ["get", "name"], "Germany"],
-      palettes[selectedPalette.value].colors[0],
-      "#00000000"
-    ]
-  )
-  
-  
-  map.value.setPaintProperty(
-    "countries-fill",
-    "fill-opacity",
-    1
-  )
+
+  updateCountryFill()
 
   const colors = palettes[newPalette]?.colors || []
   const stops = [0, 5, 10, 20, 30]
@@ -213,11 +215,33 @@ watch(selectedPalette, (newPalette) => {
   ])
 })
 
-const sourceUrl = computed(() => {
+const pmtilesUrl = computed(() => {
   const source = selectedSourceInfo.value
   if (!source) return ''
-  return `pmtiles://http://localhost:8000/tiles/${source.region}/${source.key}/${source.region}_${layer.value}.pmtiles`
+  return `${API_BASE_URL}/tiles/${source.region}/${source.key}/${source.region}_${layer.value}.pmtiles`
 })
+
+const sourceUrl = computed(() =>
+  pmtilesUrl.value ? `pmtiles://${pmtilesUrl.value}` : ''
+)
+
+let fittedRegion = selectedSourceInfo.value?.region ?? null
+
+async function fitToSourceBounds() {
+  const region = selectedSourceInfo.value?.region
+  if (!map.value || !pmtilesUrl.value || !region || region === fittedRegion) return
+
+  try {
+    const header = await new PMTiles(pmtilesUrl.value).getHeader()
+    map.value.fitBounds(
+      [[header.minLon, header.minLat], [header.maxLon, header.maxLat]],
+      { padding: 20, duration: 0 }
+    )
+    fittedRegion = region
+  } catch (err) {
+    console.error(`Could not read PMTiles bounds for ${pmtilesUrl.value}`, err)
+  }
+}
 
 watch(
   [selectedSource, selectedCategory, selectedMode],
@@ -366,6 +390,8 @@ function setLayer(layerName) {
 function applyLayer(layerName) {
   setSource(layerName)
   setLayer(layer.value)
+  fitToSourceBounds()
+  updateCountryFill()
 }
 
 function getFirstSymbolLayerId() {
@@ -392,13 +418,7 @@ function addCustomLayers() {
       type: "fill",
       source: "countries",
       paint: {
-        "fill-color": [
-          "match",
-          ["get", "name"],
-          "Germany",
-          palettes[selectedPalette.value].colors[0],
-          "#00000000"
-        ],
+        "fill-color": countryFillColor.value,
         "fill-opacity": 1
       }
     }, firstSymbolLayer);
