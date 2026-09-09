@@ -1,31 +1,42 @@
-from fastapi import FastAPI, BackgroundTasks
+from fastapi import FastAPI, BackgroundTasks, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from core.admin.dataset_service import (
-    list_datasets,
-    build_all_tiles as service_build_all_tiles,
-    build_single_tile as service_build_single_tile,
-)
-from core.jobs.job_manager import create_job, get_job, list_jobs
-from fastapi import HTTPException
+import os
 
 app = FastAPI()
 
-# allow frontend to call backend (CORS)
+FRONTEND_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # restrict later
+    allow_origins=FRONTEND_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=[
+        "Accept-Ranges",
+        "Content-Length",
+        "Content-Range",
+        "Content-Type",
+        "ETag",
+        "Last-Modified",
+    ],
 )
+
+TILES_DIRECTORY = "/mnt/data/tiles"
+
+if not os.path.isdir(TILES_DIRECTORY):
+    raise RuntimeError(f"Tiles directory does not exist: {TILES_DIRECTORY}")
 
 app.mount(
     "/tiles",
-    StaticFiles(directory="/mnt/data/tiles"),
-    name="tiles"
+    StaticFiles(directory=TILES_DIRECTORY),
+    name="tiles",
 )
-      
+
 @app.on_event("startup")
 def load_data():
     print("Ready!")
