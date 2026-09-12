@@ -32,7 +32,11 @@
       />
     </div>
 
-    
+
+
+    <p v-if="error" class="build-error">
+      {{ error }}
+    </p>
 
     <div class="actions">
       <button
@@ -65,6 +69,10 @@ const props = defineProps({
   buildStatuses: {
     type: Object,
     default: () => ({}),
+  },
+  error: {
+    type: String,
+    default: null,
   },
 })
 
@@ -118,6 +126,13 @@ function buildMode(data) {
 
 .details p {
   margin: 0;
+}
+
+.build-error {
+  margin-top: 0.75rem;
+  font-size: 0.8rem;
+  color: #dc2626;
+  text-align: right;
 }
 
 .actions {

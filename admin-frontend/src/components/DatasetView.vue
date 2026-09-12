@@ -8,6 +8,7 @@
         :key="dataset.dataset"
         :dataset="dataset"
         :build-statuses="buildStatuses"
+        :error="buildErrors[dataset.dataset]"
         @build="buildDataset"
         @build-mode="buildTiles"
       />
@@ -23,6 +24,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
 const datasets = ref([])
 const buildStatuses = ref({})
+const buildErrors = ref({})
 
 let jobsPollingInterval = null
 
@@ -133,6 +135,8 @@ function stopJobsPolling() {
 
 async function buildDataset(dataset) {
 
+  delete buildErrors.value[dataset.dataset]
+
   try {
     const response = await fetch(
       `${API_BASE_URL}/admin/datasets/${dataset.dataset}/build`,
@@ -163,10 +167,17 @@ async function buildDataset(dataset) {
       `Could not build dataset ${dataset.dataset}:`,
       error
     )
+
+    buildErrors.value = {
+      ...buildErrors.value,
+      [dataset.dataset]: error.message,
+    }
   }
 }
 
 async function buildTiles({ dataset, category, mode }) {
+
+  delete buildErrors.value[dataset]
 
   try {
     const response = await fetch(
@@ -197,6 +208,11 @@ async function buildTiles({ dataset, category, mode }) {
       `Could not build tiles for ${dataset}/${category}/${mode}:`,
       error
     )
+
+    buildErrors.value = {
+      ...buildErrors.value,
+      [dataset]: error.message,
+    }
   }
 }
 
