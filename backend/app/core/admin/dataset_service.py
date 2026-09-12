@@ -210,19 +210,29 @@ def generate_all_tiles(dataset: str, region: str, categories: list, modes: list,
     has_error = False
     for category in categories:
         for mode in modes:
+            output_path = (
+                TILES_DIR
+                / region
+                / dataset
+                / f"{region}_{category}_{mode}.pmtiles"
+            )
+
+            if output_path.exists():
+                continue
+
             child_job_id  = create_job(
                 dataset=dataset,
                 category=category,
                 mode=mode
             )
-            
+
             success = generate_single_tile(
                 dataset=dataset,
                 region=region,
-                category=category.value,
-                mode=mode.value,
+                category=category,
+                mode=mode,
                 base_resolution=base_resolution,
-                job_id=child_job_id 
+                job_id=child_job_id
             )
             
             if not success:

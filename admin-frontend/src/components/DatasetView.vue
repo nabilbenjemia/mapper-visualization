@@ -2,12 +2,17 @@
   <div class="dataset-view">
     <h1 class="title">Datasets</h1>
 
+    <p v-if="backendUnavailable" class="backend-error">
+      Backend is unavailable. Retrying...
+    </p>
+
     <div class="dataset-list">
       <DatasetCard
         v-for="dataset in datasets"
         :key="dataset.dataset"
         :dataset="dataset"
         :build-statuses="buildStatuses"
+        :job-errors="jobErrors"
         :error="buildErrors[dataset.dataset]"
         @build="buildDataset"
         @build-mode="buildTiles"
@@ -25,6 +30,8 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 const datasets = ref([])
 const buildStatuses = ref({})
 const buildErrors = ref({})
+const jobErrors = ref({})
+const backendUnavailable = ref(false)
 
 let jobsPollingInterval = null
 
@@ -50,6 +57,8 @@ async function loadDatasets() {
 
     datasets.value = await response.json()
 
+    backendUnavailable.value = false
+
     console.log("Loaded datasets:", datasets.value)
 
   } catch (error) {
@@ -57,6 +66,8 @@ async function loadDatasets() {
       "Could not load datasets:",
       error
     )
+
+    backendUnavailable.value = true
   }
 }
 
@@ -75,6 +86,7 @@ async function loadJobs() {
     const jobs = await response.json()
 
     const statuses = {}
+    const errors = {}
 
     for (const job of jobs) {
 
@@ -88,6 +100,7 @@ async function loadJobs() {
         )
 
         statuses[key] = job.status
+        errors[key] = job.error
 
       }
 
@@ -99,16 +112,22 @@ async function loadJobs() {
         )
 
         statuses[key] = job.status
+        errors[key] = job.error
       }
     }
 
     buildStatuses.value = statuses
+    jobErrors.value = errors
+
+    backendUnavailable.value = false
 
   } catch (error) {
     console.error(
       "Could not load jobs:",
       error
     )
+
+    backendUnavailable.value = true
   }
 }
 
@@ -177,8 +196,6 @@ async function buildDataset(dataset) {
 
 async function buildTiles({ dataset, category, mode }) {
 
-  delete buildErrors.value[dataset]
-
   try {
     const response = await fetch(
       `${API_BASE_URL}/admin/datasets/${dataset}/build/${category}/${mode}`,
@@ -208,11 +225,6 @@ async function buildTiles({ dataset, category, mode }) {
       `Could not build tiles for ${dataset}/${category}/${mode}:`,
       error
     )
-
-    buildErrors.value = {
-      ...buildErrors.value,
-      [dataset]: error.message,
-    }
   }
 }
 
@@ -250,5 +262,18 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+.backend-error {
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.25rem;
+
+  border: 0.0625rem solid #fca5a5;
+  border-radius: 0.5rem;
+
+  background: #fef2f2;
+  color: #b91c1c;
+
+  font-size: 0.875rem;
 }
 </style>

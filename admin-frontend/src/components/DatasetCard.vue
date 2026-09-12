@@ -28,6 +28,7 @@
       <CategoryModes
         :dataset="dataset"
         :build-statuses="buildStatuses"
+        :job-errors="jobErrors"
         @build-mode="buildMode"
       />
     </div>
@@ -67,6 +68,10 @@ const props = defineProps({
     required: true,
   },
   buildStatuses: {
+    type: Object,
+    default: () => ({}),
+  },
+  jobErrors: {
     type: Object,
     default: () => ({}),
   },

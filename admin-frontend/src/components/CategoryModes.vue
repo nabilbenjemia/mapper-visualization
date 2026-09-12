@@ -37,58 +37,67 @@
           :key="mode.mode"
           class="mode-row"
         >
-          <span class="mode-name">
-            {{ formatName(mode.mode) }}
-          </span>
-
-          <div class="mode-actions">
-            <span class="status"
-              :class="{
-                available:
-                  mode.available &&
-                  !getBuildStatus(selectedCategory, mode.mode),
-
-                processing:
-                  getBuildStatus(selectedCategory, mode.mode) ===
-                  'PROCESSING',
-
-                error:
-                  getBuildStatus(selectedCategory, mode.mode) ===
-                  'ERROR',
-
-                unavailable:
-                  !mode.available &&
-                  !getBuildStatus(selectedCategory, mode.mode)
-              }"
-            >
-              <span class="status-dot"></span>
-
-              {{
-                getBuildStatus(selectedCategory, mode.mode) ===
-                "PROCESSING"
-                  ? "Processing..."
-                  : getBuildStatus(selectedCategory, mode.mode) ===
-                    "ERROR"
-                    ? "Error"
-                    : mode.available
-                      ? "Available"
-                      : "Not available"
-              }}
+          <div class="mode-row-top">
+            <span class="mode-name">
+              {{ formatName(mode.mode) }}
             </span>
 
-            <button
-              v-if="
-                !mode.available &&
-                getBuildStatus(selectedCategory, mode.mode) !==
-                  'PROCESSING'
-              "
-              class="mode-build-button"
-              :disabled="isDatasetBuilding"
-              @click="buildMode(mode.mode)"
-            >
-              Build
-            </button>
+            <div class="mode-actions">
+              <span class="status"
+                :class="{
+                  available:
+                    mode.available &&
+                    !getBuildStatus(selectedCategory, mode.mode),
+
+                  processing:
+                    getBuildStatus(selectedCategory, mode.mode) ===
+                    'PROCESSING',
+
+                  error:
+                    getBuildStatus(selectedCategory, mode.mode) ===
+                    'ERROR',
+
+                  unavailable:
+                    !mode.available &&
+                    !getBuildStatus(selectedCategory, mode.mode)
+                }"
+              >
+                <span class="status-dot"></span>
+
+                {{
+                  getBuildStatus(selectedCategory, mode.mode) ===
+                  "PROCESSING"
+                    ? "Processing"
+                    : getBuildStatus(selectedCategory, mode.mode) ===
+                      "ERROR"
+                      ? "Error"
+                      : mode.available
+                        ? "Available"
+                        : "Not available"
+                }}
+              </span>
+
+              <button
+                v-if="
+                  !mode.available &&
+                  getBuildStatus(selectedCategory, mode.mode) !==
+                    'PROCESSING'
+                "
+                class="mode-build-button"
+                :disabled="isDatasetBuilding"
+                @click="buildMode(mode.mode)"
+              >
+                Build
+              </button>
+            </div>
           </div>
+
+          <p
+            v-if="getJobError(selectedCategory, mode.mode)"
+            class="mode-error"
+          >
+            {{ getJobError(selectedCategory, mode.mode) }}
+          </p>
         </div>
       </div>
     </div>
@@ -107,10 +116,24 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
+  jobErrors: {
+    type: Object,
+    default: () => ({}),
+  },
 })
 
 function getBuildStatus(category, mode) {
   return props.buildStatuses[
+    `${props.dataset.dataset}:${category}:${mode}`
+  ]
+}
+
+function getJobError(category, mode) {
+  if (getBuildStatus(category, mode) !== "ERROR") {
+    return null
+  }
+
+  return props.jobErrors[
     `${props.dataset.dataset}:${category}:${mode}`
   ]
 }
@@ -213,8 +236,8 @@ const isDatasetBuilding = computed(() => {
 
 .mode-row {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 0.35rem;
 
   min-height: 2.5rem;
   padding: 0.5rem 0.75rem;
@@ -223,6 +246,18 @@ const isDatasetBuilding = computed(() => {
   border-radius: 0.375rem;
 
   background: var(--bg);
+}
+
+.mode-row-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mode-error {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #dc2626;
 }
 
 .mode-name {
