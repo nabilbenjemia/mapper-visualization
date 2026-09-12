@@ -1,13 +1,22 @@
 from fastapi import FastAPI, BackgroundTasks, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from core.admin.dataset_service import (
+    list_datasets,
+    build_all_tiles as service_build_all_tiles,
+    build_single_tile as service_build_single_tile,
+)
+from core.jobs.job_manager import create_job, get_job, list_jobs, update_job
 import os
+
 
 app = FastAPI()
 
 FRONTEND_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
 ]
 
 app.add_middleware(
