@@ -26,6 +26,11 @@
           />
         </div>
       </div>
+
+      <div v-if="tileError" class="tile-error">
+        <span>{{ tileError }}</span>
+        <button class="tile-error-close" @click="tileError = null" aria-label="Dismiss">✕</button>
+      </div>
     </div>
 
     <div v-if="hoverInfo" class="hover-tooltip"
@@ -46,7 +51,8 @@ import { palettes } from '../config/palettes.js';
 import PaletteLegend from './PaletteLegend.vue';
 import { categories } from '../config/categories.js'
 import { modes } from '../config/modes.js'
-import { sources, regionCountries } from '../config/sources.js'
+import { regionCountries } from '../config/sources.js'
+import { useDatasetsStore } from '../stores/datasets.js'
 import { useThemeStore } from '../stores/theme.js';
 import DatasetMetadata from './DatasetInfo.vue'
 
@@ -72,12 +78,13 @@ const emit = defineEmits([
 ])
 
 const theme = useThemeStore()
+const datasetsStore = useDatasetsStore()
 
 const containerId = computed(() => `map-container-${props.mapId}`)
 
 const selectedCategory = ref(props.category ?? categories[2].key)
 const selectedMode = ref(props.mode ?? modes[2].key)
-const selectedSource = ref(props.source ?? '2026-06-30T05-14-58Z_europe-germany_e046f3')
+const selectedSource = ref(props.source ?? null)
 const selectedPalette = ref(props.palette ?? 'classic'); 
 const compareState = ref(null)
 const isCompareMode = computed(() => props.compareMode)
@@ -106,11 +113,11 @@ const hoverInfo = ref(null);
 const mousePos = ref({ x: 0, y: 0 });
 
 const selectedSourceInfo = computed(() =>
-  sources.find(s => s.key === selectedSource.value)
+  datasetsStore.sources.find(s => s.key === selectedSource.value)
 )
 
 async function loadMetadata(sourceKey) {
-  const src = sources.find(s => s.key === sourceKey)
+  const src = datasetsStore.sources.find(s => s.key === sourceKey)
 
   if (!src) {
     metadata.value = null
@@ -226,6 +233,7 @@ const sourceUrl = computed(() =>
 )
 
 let fittedRegion = selectedSourceInfo.value?.region ?? null
+const tileError = ref(null)
 
 async function fitToSourceBounds() {
   const region = selectedSourceInfo.value?.region
@@ -238,8 +246,10 @@ async function fitToSourceBounds() {
       { padding: 20, duration: 0 }
     )
     fittedRegion = region
+    tileError.value = null
   } catch (err) {
     console.error(`Could not read PMTiles bounds for ${pmtilesUrl.value}`, err)
+    tileError.value = `Tiles for ${layer.value} are not available for this dataset yet.`
   }
 }
 
@@ -278,7 +288,17 @@ onMounted(() => {
     zoom: 5.3
   });
 
-  loadMetadata(selectedSource.value)
+  datasetsStore.load().then(() => {
+    if (!selectedSource.value) {
+      const defaultSource = datasetsStore.sources.find(
+        s => s.region === 'germany' && s.kernel === 'gaussian'
+      )
+
+      selectedSource.value = defaultSource?.key ?? datasetsStore.sources[0]?.key ?? null
+    }
+
+    loadMetadata(selectedSource.value)
+  })
 
   map.value.on('load', () => {
     isMapReady.value = true
@@ -479,6 +499,38 @@ function addCustomLayers() {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+.tile-error {
+  position: absolute;
+  top: 5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #b3261eCC;
+  color: white;
+  padding: 0.375rem 0.5rem 0.375rem 0.75rem;
+  border-radius: 0.375rem;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+  z-index: 1000;
+}
+
+.tile-error-close {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 0.8125rem;
+  line-height: 1;
+  padding: 0.125rem 0.25rem;
+  cursor: pointer;
+  opacity: 0.85;
+}
+
+.tile-error-close:hover {
+  opacity: 1;
 }
 
 .hover-tooltip {

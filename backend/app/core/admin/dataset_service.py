@@ -364,5 +364,47 @@ def list_datasets():
 
     return datasets
 
+def list_available_datasets():
+
+    datasets = []
+
+    for region_path in TILES_DIR.iterdir():
+
+        if not region_path.is_dir():
+            continue
+
+        for dataset_path in region_path.iterdir():
+
+            if not dataset_path.is_dir():
+                continue
+
+            dataset = dataset_path.name
+
+            if not any(dataset_path.glob("*.pmtiles")):
+                continue
+
+            metadata_path = dataset_path / "metadata.json"
+
+            if not metadata_path.exists():
+                continue
+
+            with open(metadata_path) as f:
+                metadata = json.load(f)
+
+            region = metadata.get("region", "").split("/")[-1]
+            kernel_type = metadata.get("kernel", {}).get("type")
+
+            if not region or not kernel_type:
+                continue
+
+            datasets.append({
+                "key": dataset,
+                "region": region,
+                "kernel": kernel_type
+            })
+
+    return datasets
+
+
 def valid_parquet(path):
     return os.path.exists(path) and os.path.getsize(path) > 0

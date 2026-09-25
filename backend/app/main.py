@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from core.admin.dataset_service import (
     list_datasets,
+    list_available_datasets,
     build_all_tiles as service_build_all_tiles,
     build_single_tile as service_build_single_tile,
 )
@@ -57,6 +58,10 @@ def health():
 @app.get("/admin/datasets")
 def get_datasets():
     return list_datasets()
+
+@app.get("/datasets")
+def get_available_datasets():
+    return list_available_datasets()
 
 @app.post("/admin/datasets/{dataset}/build")
 def build_all_tiles(dataset: str, background_tasks: BackgroundTasks):

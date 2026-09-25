@@ -50,9 +50,16 @@
 <script setup>
 import { categories as categoryConfig } from '../config/categories'
 import { modes as modeConfig } from '../config/modes'
-import { sources } from '../config/sources'
-import { watch, computed } from 'vue'
+import { useDatasetsStore } from '../stores/datasets'
+import { watch, computed, onMounted } from 'vue'
 import { ref } from 'vue'
+
+const datasetsStore = useDatasetsStore()
+const sources = computed(() => datasetsStore.sources)
+
+onMounted(() => {
+  datasetsStore.load()
+})
 
 const props = defineProps({
   metadata: Object,
