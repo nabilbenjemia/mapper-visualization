@@ -42,7 +42,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue'
+import { ref, shallowRef, onMounted, onBeforeUnmount, watch, computed } from 'vue'
 import MapControls from './MapControls.vue'
 import maplibregl from 'maplibre-gl';
 import { PMTiles } from 'pmtiles';
@@ -55,6 +55,7 @@ import { regionCountries } from '../config/sources.js'
 import { useDatasetsStore } from '../stores/datasets.js'
 import { useThemeStore } from '../stores/theme.js';
 import DatasetMetadata from './DatasetInfo.vue'
+import { startTiming, logSwitchRendered, createBenchmark } from '../utils/renderTiming.js'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
@@ -107,7 +108,8 @@ const layer = computed(() => {
 
 const expanded = ref(false);
 
-const map = ref(null);
+// shallowRef: Vue must not proxy maplibre internals (frozen objects break deep proxies)
+const map = shallowRef(null);
 const hoverInfo = ref(null);
 
 const mousePos = ref({ x: 0, y: 0 });
@@ -222,11 +224,13 @@ watch(selectedPalette, (newPalette) => {
   ])
 })
 
-const pmtilesUrl = computed(() => {
+function pmtilesUrlFor(layerName) {
   const source = selectedSourceInfo.value
   if (!source) return ''
-  return `${API_BASE_URL}/tiles/${source.region}/${source.key}/${source.region}_${layer.value}.pmtiles`
-})
+  return `${API_BASE_URL}/tiles/${source.region}/${source.key}/${source.region}_${layerName}.pmtiles`
+}
+
+const pmtilesUrl = computed(() => pmtilesUrlFor(layer.value))
 
 const sourceUrl = computed(() =>
   pmtilesUrl.value ? `pmtiles://${pmtilesUrl.value}` : ''
@@ -258,8 +262,21 @@ watch(
   async () => {
     if (!isMapReady.value) return
 
+    // Time from selection change to hexagons visible on the map
+    const timingId = startTiming()
+    const start = performance.now()
+
     await loadMetadata(selectedSource.value)
-    applyLayer(sourceUrl.value)
+    const metadataMs = performance.now() - start
+
+    await applyLayer(sourceUrl.value)
+
+    logSwitchRendered(map.value, {
+      timingId,
+      label: `${selectedSourceInfo.value?.key} / ${layer.value}`,
+      start,
+      metadataMs
+    })
   }
 )
 
@@ -281,13 +298,6 @@ watch(
 )
 
 onMounted(() => {
-  map.value = new maplibregl.Map({
-    container: containerId.value,
-    style: theme.dark ? 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json' : 'https://tiles.openfreemap.org/styles/liberty',
-    center: [10.4097, 51.4938],
-    zoom: 5.3
-  });
-
   datasetsStore.load().then(() => {
     if (!selectedSource.value) {
       const defaultSource = datasetsStore.sources.find(
@@ -299,6 +309,18 @@ onMounted(() => {
 
     loadMetadata(selectedSource.value)
   })
+
+  if (document.readyState === 'complete') initMap()
+  else window.addEventListener('load', initMap, { once: true })
+});
+
+function initMap() {
+  map.value = new maplibregl.Map({
+    container: containerId.value,
+    style: theme.dark ? 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json' : 'https://tiles.openfreemap.org/styles/liberty',
+    center: [10.4097, 51.4938],
+    zoom: 5.3
+  });
 
   map.value.on('load', () => {
     isMapReady.value = true
@@ -355,24 +377,45 @@ onMounted(() => {
       `center: [${center.lng.toFixed(4)}, ${center.lat.toFixed(4)}], zoom: ${zoom.toFixed(2)}`
     );
   });
-});
+
+  benchmark.install()
+}
 
 onBeforeUnmount(() => {
-  map.value?.remove() 
+  window.removeEventListener('load', initMap)
+  benchmark.uninstall()
+  map.value?.remove()
 })
+
+// Console benchmarks (see utils/renderTiming.js)
+const benchmark = createBenchmark({
+  map: () => map.value,
+  dataset: () => (isMapReady.value ? selectedSourceInfo.value?.key ?? null : null),
+  metadata: () => metadata.value,
+  currentCombo: () => ({ category: selectedCategory.value, mode: selectedMode.value }),
+  tileUrl: pmtilesUrlFor,
+  showLayer: (layerName) => {
+    removeHexLayer()
+    map.value.addSource(SOURCE_ID, { type: "vector", url: `pmtiles://${pmtilesUrlFor(layerName)}` })
+    setLayer(layerName)
+  },
+  hideLayer: removeHexLayer,
+  restoreLayer: () => {
+    setSource()
+    setLayer(layer.value)
+  }
+})
+
+function removeHexLayer() {
+  if (map.value.getLayer(LAYER_ID)) map.value.removeLayer(LAYER_ID)
+  if (map.value.getSource(SOURCE_ID)) map.value.removeSource(SOURCE_ID)
+}
 
 
 function setSource(layerName) {
-  console.log("Setting source for layer:", layerName, " with source:", selectedSource.value);
   if (!map.value) return
 
-  if (map.value.getLayer(LAYER_ID)) {
-    map.value.removeLayer(LAYER_ID)
-  }
-
-  if (map.value.getSource(SOURCE_ID)) {
-    map.value.removeSource(SOURCE_ID)
-  }
+  removeHexLayer()
 
   map.value.addSource(SOURCE_ID, {
     type: "vector",
@@ -410,8 +453,9 @@ function setLayer(layerName) {
 function applyLayer(layerName) {
   setSource(layerName)
   setLayer(layer.value)
-  fitToSourceBounds()
+  const fitted = fitToSourceBounds()
   updateCountryFill()
+  return fitted
 }
 
 function getFirstSymbolLayerId() {
